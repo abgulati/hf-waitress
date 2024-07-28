@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, TextStreamer
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, TextStreamer, BitsAndBytesConfig
 from huggingface_hub import login
 import torch
 
@@ -148,7 +148,10 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
             default_value = {
                 'access_gated':False,
                 'access_token':"",
-                'model_id':"microsoft/Phi-3-mini-4k-instruct", 
+                'model_id':"microsoft/Phi-3-mini-4k-instruct",
+                'quantize':"bitsandbytes",
+                'quant_level':"int8",
+                'push_to_hub':False,
                 'torch_device_map':"auto", 
                 'torch_dtype':"auto", 
                 'trust_remote_code':False, 
@@ -244,10 +247,13 @@ def parse_arguments():
 
     # Even if a parser object could not be created, a read_request will write & return defaults 
     try:
-        read_return = read_config(['access_gated', 'access_token', 'model_id', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+        read_return = read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
         access_gated = bool(read_return['access_gated'])
         access_token = str(read_return['access_token'])
         model_id = str(read_return['model_id'])
+        quantize = str(read_return['quantize'])
+        quant_level = str(read_return['quant_level'])
+        push_to_hub = bool(read_return['push_to_hub'])
         torch_device_map = str(read_return['torch_device_map'])
         torch_dtype = str(read_return['torch_dtype'])
         trust_remote_code = bool(read_return['trust_remote_code'])
@@ -270,6 +276,9 @@ def parse_arguments():
         parser.add_argument("--access_gated", action="store_true", default=access_gated, help="Specify True if you will be accessing gated models you've been approved to access")
         parser.add_argument("--access_token", type=str, default=access_token, help="Access Token obtained from HF-Settings -> Access Tokens")
         parser.add_argument("--model_id", type=str, default=model_id, help="model_id for for LLM in HF-Transformers format obtained from the model card. Remembers previously set value and falls-back to Phi3-mini-4k-instruct as the default.")
+        parser.add_argument("--quantize", type=str, default=quantize, help="Quantization method to be utilized. Simply type 'n' to not use quantization. Remembers previously set value and falls-back to bitsandbytes as the default.")
+        parser.add_argument("--quant_level", type=str, default=quant_level, help="Specify quantization level, for example int8, int4, etc. Remembers previously set value and falls-back to int8 as the default.")
+        parser.add_argument("--push_to_hub", action="store_true", default=push_to_hub, help="Push quantized LLM to your HF-hub. Remembers previously set value and falls-back to False as the default.")
         parser.add_argument("--torch_device_map", type=str, default=torch_device_map, help="Specify inference device, example: cuda. Remembers previously set value and falls-back to auto as the default.")
         parser.add_argument("--torch_dtype", type=str, default=torch_dtype, help="Specify model tensor type, example: bfloat16. Remembers previously set value and falls-back to auto as the default.")
         parser.add_argument("-trust_remote_code", action="store_true", default=trust_remote_code, help="Allows the model to execute custom code that's part of the model's HF-repository. Remembers previously set value and falls-back to False by default as a security measure to prevent potentially malicious code from running automatically.")
@@ -295,7 +304,7 @@ def parse_arguments():
                     json.dump({}, file, indent=4)
                 
                 # Set defaults
-                read_config(['access_gated', 'access_token', 'model_id', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+                read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
 
             except Exception as e:
                 handle_local_error("Could not reset hf_config.json, encountered error: ", e)
@@ -304,7 +313,10 @@ def parse_arguments():
                 write_config({
                     'access_gated':args.access_gated,
                     'access_token':args.access_token,
-                    'model_id':args.model_id, 
+                    'model_id':args.model_id,
+                    'quantize':args.quantize,
+                    'quant_level':args.quant_level,
+                    'push_to_hub':args.push_to_hub, 
                     'torch_device_map':args.torch_device_map, 
                     'torch_dtype':args.torch_dtype, 
                     'trust_remote_code':args.trust_remote_code, 
@@ -332,10 +344,77 @@ def parse_arguments():
     return True
 
 
+def initialize_model():
+
+    try:
+        read_return = read_config(['model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+        model_id = str(read_return['model_id'])
+        quantize = str(read_return['quantize'])
+        quant_level = str(read_return['quant_level'])
+        push_to_hub = bool(read_return['push_to_hub'])
+        torch_device_map = str(read_return['torch_device_map'])
+        torch_dtype = str(read_return['torch_dtype'])
+        trust_remote_code = bool(read_return['trust_remote_code'])
+        use_flash_attention_2 = bool(read_return['use_flash_attention_2'])
+        pipeline_task = str(read_return['pipeline_task'])
+        max_new_tokens = int(read_return['max_new_tokens'])
+        return_full_text = bool(read_return['return_full_text'])
+        temperature = float(read_return['temperature'])
+        do_sample = bool(read_return['do_sample'])
+        top_k = int(read_return['top_k'])
+        top_p = float(read_return['top_p'])
+        min_p = float(read_return['min_p'])
+        n_keep = int(read_return['n_keep'])
+    except Exception as e:
+        handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
+
+    model_params = {
+        "device_map": torch_device_map,
+        "torch_dtype": torch_dtype,
+        "trust_remote_code": trust_remote_code,
+    }
+
+    if use_flash_attention_2:
+        model_params["attn_implementation"] = "flash_attention_2"
+
+    quantize = quantize.lower().strip()
+    if quantize != "n":
+
+        if quantize == "bitsandbytes":
+
+            quant_level = quant_level.lower().strip()
+            if quant_level == "int8":
+                quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+                model_params["quantization_config"] = quantization_config
+            elif quant_level == "int4":
+                quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+                model_params["quantization_config"] = quantization_config
+
+    
+    model = AutoModelForCausalLM.from_pretrained(model_id, **model_params)
+
+    print(f"Your model's memory footprint is: {model.get_memory_footprint()}")
+
+    if push_to_hub:
+        model.push_to_hub("phi3-mini-8bit")
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+    pipe = pipeline(
+        pipeline_task,
+        model=model,
+        tokenizer=tokenizer,
+    )
+
+    return pipe
+
+
 def main():
     #TODO
 
     parse_arguments()
+
+    initialize_model()
 
     app.run(host='0.0.0.0', port=9069)
 
