@@ -17,6 +17,9 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 
+PIPE = None
+
+
 #########################------------Setup & Handle Logging-------------###############################
 try:
     # 1 - Create a logger
@@ -346,8 +349,10 @@ def parse_arguments():
 
 def initialize_model():
 
+    global PIPE
+
     try:
-        read_return = read_config(['model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+        read_return = read_config(['model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
         model_id = str(read_return['model_id'])
         quantize = str(read_return['quantize'])
         quant_level = str(read_return['quant_level'])
@@ -357,14 +362,6 @@ def initialize_model():
         trust_remote_code = bool(read_return['trust_remote_code'])
         use_flash_attention_2 = bool(read_return['use_flash_attention_2'])
         pipeline_task = str(read_return['pipeline_task'])
-        max_new_tokens = int(read_return['max_new_tokens'])
-        return_full_text = bool(read_return['return_full_text'])
-        temperature = float(read_return['temperature'])
-        do_sample = bool(read_return['do_sample'])
-        top_k = int(read_return['top_k'])
-        top_p = float(read_return['top_p'])
-        min_p = float(read_return['min_p'])
-        n_keep = int(read_return['n_keep'])
     except Exception as e:
         handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
 
@@ -400,13 +397,46 @@ def initialize_model():
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-    pipe = pipeline(
+    PIPE = pipeline(
         pipeline_task,
         model=model,
         tokenizer=tokenizer,
     )
 
-    return pipe
+    return True
+
+
+@app.route('/completions', methods=['POST'])
+def completions():
+    data = request.json
+    messages = data.get('messages', [])
+
+    try:
+        read_return = read_config(['max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+        max_new_tokens = int(read_return['max_new_tokens'])
+        return_full_text = bool(read_return['return_full_text'])
+        temperature = float(read_return['temperature'])
+        do_sample = bool(read_return['do_sample'])
+        top_k = int(read_return['top_k'])
+        top_p = float(read_return['top_p'])
+        min_p = float(read_return['min_p'])
+        n_keep = int(read_return['n_keep'])
+    except Exception as e:
+        handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
+
+    generation_args = {
+        "max_new_tokens": max_new_tokens,
+        "return_full_text": return_full_text,
+        "temperature": temperature,
+        "do_sample": do_sample,
+        "top_k":top_k,
+        "top_p":top_p,
+        "min_p":min_p
+    }
+
+    output = PIPE(messages, **generation_args)
+
+    return jsonify({"success": True, "response": output})
 
 
 def main():
