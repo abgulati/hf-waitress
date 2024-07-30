@@ -3,15 +3,19 @@ from huggingface_hub import login
 import torch
 
 import subprocess
+import threading
 import traceback
 import argparse
 import logging
+import queue
 import json
 import uuid
+import sys
 import os
+import io
 
 from logging.handlers import RotatingFileHandler
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 
 
 app = Flask(__name__)
@@ -45,40 +49,40 @@ except Exception as e:
 
 def handle_api_error(message, exception=None):
     error_message = f"{message} {str(exception) if exception else '; No exception info.'}".strip()
-    traceback_details = traceback.format_exc()
-    full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
+    # traceback_details = traceback.format_exc()
+    # full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
 
     if logger:
-        logger.error(full_message)
+        logger.error(error_message)
         print(error_message)
     else:
-        print(full_message)
+        print(error_message)
     return jsonify(success=False, error=error_message), 500 #internal server error
 
 
 def handle_local_error(message, exception=None):
     error_message = f"{message} {str(exception) if exception else '; No exception info.'}".strip()
-    traceback_details = traceback.format_exc()
-    full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
+    # traceback_details = traceback.format_exc()
+    # full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
 
     if logger:
-        logger.error(full_message)
+        logger.error(error_message)
         print(error_message)
     else:
-        print(full_message)
+        print(error_message)
     raise Exception(exception)
 
 
 def handle_error_no_return(message, exception=None):
     error_message = f"{message} {str(exception) if exception else '; No exception info.'}".strip()
-    traceback_details = traceback.format_exc()
-    full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
+    # traceback_details = traceback.format_exc()
+    # full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
 
     if logger:
-        logger.error(full_message)
+        logger.error(error_message)
         print(error_message)
     else:
-        print(full_message)
+        print(error_message)
 
 ############################----------------------------------------------###############################
 
@@ -496,6 +500,119 @@ def completions():
         handle_api_error("Could not generate output, encountered error: ", e)
 
     return jsonify({"success": True, "response": output})
+
+
+
+class CustomStream(io.StringIO):
+    def __init__(self, callback=None):
+        super().__init__()
+        self.callback = callback
+
+    def write(self, data):
+        # If we have a callback, call it
+        if self.callback:
+            self.callback(data)
+
+        return super().write(data)
+
+
+@app.route('/completions_stream', methods=['POST'])
+def completions_stream():
+
+    print("completions_stream route triggered")
+
+    try:
+        data = request.json
+        messages = data.get('messages', [])
+    except Exception as e:
+        handle_api_error("Could not read POST-request messages for /completions_stream, encountered error: ", e)
+
+    try:
+        read_return = read_config(['max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+        max_new_tokens = int(read_return['max_new_tokens'])
+        return_full_text = str(read_return['return_full_text']).lower() == 'true'
+        temperature = float(read_return['temperature'])
+        do_sample = str(read_return['do_sample']).lower() == 'true'
+        top_k = int(read_return['top_k'])
+        top_p = float(read_return['top_p'])
+        min_p = float(read_return['min_p'])
+        n_keep = int(read_return['n_keep'])
+    except Exception as e:
+        handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
+
+    try:
+        generation_args = {
+            "max_new_tokens": int(request.headers.get('X-Max-New-Tokens', str(max_new_tokens))),
+            "return_full_text": request.headers.get('X-Return-Full-Text', str(return_full_text)).lower() == 'true',
+            "temperature": float(request.headers.get('X-Temperature', str(temperature))),
+            "do_sample": request.headers.get('X-Do-Sample', str(do_sample)).lower() == 'true',
+            "top_k": int(request.headers.get('X-Top-K', str(top_k))),
+            "top_p": float(request.headers.get('X-Top-P', str(top_p))),
+            "min_p": float(request.headers.get('X-Min-P', str(min_p)))
+        }
+    except Exception as e:
+        handle_error_no_return("Could not set generation-arguments for /completions_stream, proceeding without them. Encountered error: ", e)
+
+
+    stop_thread = threading.Event()
+
+    def generate():
+
+        data_queue = queue.Queue()
+
+        def callback(data):
+            data_queue.put(data)
+
+        custom_stream = CustomStream(callback=callback)
+
+        original_stdout = sys.stdout
+        sys.stdout = custom_stream
+
+        def llm_task():
+
+            global PIPE
+
+            try:
+                streamer = TextStreamer(PIPE.tokenizer, skip_special_tokens=True)
+            except Exception as e:
+                handle_api_error("Could not create TextStreamer for completions_stream. Try using the /completions endpoint instead. Encountered error: ", e)
+            
+            try:
+                if generation_args:
+                    generation_args["streamer"] = streamer
+                    output = PIPE(messages, **generation_args)
+                else:
+                    output = PIPE(messages, streamer=streamer)
+            except Exception as e:
+                handle_api_error("Could not generate output, encountered error: ", e)
+            finally:
+                sys.stdout = original_stdout
+
+                data_queue.put(None)
+                stop_thread.set()
+        
+        thread = threading.Thread(target=llm_task)
+        thread.start()
+
+        i = 0
+        while True:
+            line = data_queue.get()
+            if line is None:
+                print("None read, breaking and stopping thread")
+                thread.join()
+                break
+            if i == 0:
+                line = line.strip('\n')
+                i += 1
+            yield f"data: {line}\n\n"
+        
+        yield "event: END\ndata: null\n\n"
+
+        print("LLM stream done")
+
+    print("\n\nInferencing Begins!\n\n")
+    return Response(generate(), content_type='text/event-stream')
+
 
 
 def main():
