@@ -227,6 +227,29 @@ def hf_config_writer_api():
 ############################----------------------------------------------###############################
 
 
+
+def safe_int(value, default):
+    if value is None:
+        handle_error_no_return("Null value, cannot convert to integer type. Proceeding with default value.")
+        return default
+    try:
+        return int(value)
+    except(ValueError, TypeError) as e:
+        handle_error_no_return(f"Could not convert {value} to an integer, proceeding with default value {default}. Encountered error: ", e)
+        return default
+
+
+def safe_float(value, default):
+    if value is None:
+        handle_error_no_return("Null value, cannot convert to float type. Proceeding with default value.")
+        return default
+    try:
+        return float(value)
+    except(ValueError, TypeError) as e:
+        handle_error_no_return(f"Could not convert {value} to a float, proceeding with default value {default}. Encountered error: ", e)
+        return default
+
+
 def hf_login_for_gated_models():
     access_token = ""
     try:
@@ -246,26 +269,26 @@ def parse_arguments():
     try:
         parser = argparse.ArgumentParser(description="Server for HuggingFace Transformers models")
     except Exception as e:
-        handle_api_error("Could not create parser to parse_arguments(), proceeding with defaults. Encountered error: ", e)
+        handle_local_error("Could not create parser to parse_arguments(), proceeding with defaults. Encountered error: ", e)
 
     # Even if a parser object could not be created, a read_request will write & return defaults 
     try:
         read_return = read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
-        access_gated = bool(read_return['access_gated'])
+        access_gated = str(read_return['access_gated']).lower() == 'true'
         access_token = str(read_return['access_token'])
         model_id = str(read_return['model_id'])
         quantize = str(read_return['quantize'])
         quant_level = str(read_return['quant_level'])
-        push_to_hub = bool(read_return['push_to_hub'])
+        push_to_hub = str(read_return['push_to_hub']).lower() == 'true'
         torch_device_map = str(read_return['torch_device_map'])
         torch_dtype = str(read_return['torch_dtype'])
-        trust_remote_code = bool(read_return['trust_remote_code'])
-        use_flash_attention_2 = bool(read_return['use_flash_attention_2'])
+        trust_remote_code = str(read_return['trust_remote_code']).lower() == 'true'
+        use_flash_attention_2 = str(read_return['use_flash_attention_2']).lower() == 'true'
         pipeline_task = str(read_return['pipeline_task'])
         max_new_tokens = int(read_return['max_new_tokens'])
-        return_full_text = bool(read_return['return_full_text'])
+        return_full_text = str(read_return['return_full_text']).lower() == 'true'
         temperature = float(read_return['temperature'])
-        do_sample = bool(read_return['do_sample'])
+        do_sample = str(read_return['do_sample']).lower() == 'true'
         top_k = int(read_return['top_k'])
         top_p = float(read_return['top_p'])
         min_p = float(read_return['min_p'])
@@ -356,11 +379,11 @@ def initialize_model():
         model_id = str(read_return['model_id'])
         quantize = str(read_return['quantize'])
         quant_level = str(read_return['quant_level'])
-        push_to_hub = bool(read_return['push_to_hub'])
+        push_to_hub = str(read_return['push_to_hub']).lower() == 'true'
         torch_device_map = str(read_return['torch_device_map'])
         torch_dtype = str(read_return['torch_dtype'])
-        trust_remote_code = bool(read_return['trust_remote_code'])
-        use_flash_attention_2 = bool(read_return['use_flash_attention_2'])
+        trust_remote_code = str(read_return['trust_remote_code']).lower() == 'true'
+        use_flash_attention_2 = str(read_return['use_flash_attention_2']).lower() == 'true'
         pipeline_task = str(read_return['pipeline_task'])
     except Exception as e:
         handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
@@ -378,45 +401,72 @@ def initialize_model():
     if quantize != "n":
 
         if quantize == "bitsandbytes":
-
+            print("Quantizing with BitsAndBytes")
             quant_level = quant_level.lower().strip()
+
+            try:
+                if quant_level == "int8":
+                    print("Proceeding with BitsAndBytes-Int8 Quant")
+                    quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+                    model_params["quantization_config"] = quantization_config
+                elif quant_level == "int4":
+                    print("Proceeding with BitsAndBytes-Int4 Quant")
+                    quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+                    model_params["quantization_config"] = quantization_config
+            except Exception as e:
+                handle_local_error("Could not set BitsAndBytes config to initialize_model(), encountered error: ", e)
+
+    try:
+        model = AutoModelForCausalLM.from_pretrained(model_id, **model_params)
+    except Exception as e:
+        handle_local_error("Could not create AutoModelForCausalLM, encountered error: ", e)
+
+    try:
+        print(f"Your model's memory footprint is: {model.get_memory_footprint()}")
+    except Exception as e:
+        handle_error_no_return("Could not determine the model's memory footprint, encountered error: ", e)
+
+    try:
+        if push_to_hub:
             if quant_level == "int8":
-                quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-                model_params["quantization_config"] = quantization_config
+                model.push_to_hub(model_id + "-Int8")
             elif quant_level == "int4":
-                quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-                model_params["quantization_config"] = quantization_config
+                model.push_to_hub(model_id + "-Int4")
+    except Exception as e:
+        handle_error_no_return("Could not push the model to your hub, encountered error: ", e)
 
-    
-    model = AutoModelForCausalLM.from_pretrained(model_id, **model_params)
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+    except Exception as e:
+        handle_local_error("Could not set AutoTokenizer, encountered error: ", e)
 
-    print(f"Your model's memory footprint is: {model.get_memory_footprint()}")
-
-    if push_to_hub:
-        model.push_to_hub("phi3-mini-8bit")
-
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-
-    PIPE = pipeline(
-        pipeline_task,
-        model=model,
-        tokenizer=tokenizer,
-    )
+    try:
+        PIPE = pipeline(
+            pipeline_task,
+            model=model,
+            tokenizer=tokenizer,
+        )
+    except Exception as e:
+        handle_local_error("Could not create model PIPELINE, encountered error: ", e)
 
     return True
 
 
 @app.route('/completions', methods=['POST'])
 def completions():
-    data = request.json
-    messages = data.get('messages', [])
+
+    try:
+        data = request.json
+        messages = data.get('messages', [])
+    except Exception as e:
+        handle_api_error("Could not read POST-request messages for /completions, encountered error: ", e)
 
     try:
         read_return = read_config(['max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
         max_new_tokens = int(read_return['max_new_tokens'])
-        return_full_text = bool(read_return['return_full_text'])
+        return_full_text = str(read_return['return_full_text']).lower() == 'true'
         temperature = float(read_return['temperature'])
-        do_sample = bool(read_return['do_sample'])
+        do_sample = str(read_return['do_sample']).lower() == 'true'
         top_k = int(read_return['top_k'])
         top_p = float(read_return['top_p'])
         min_p = float(read_return['min_p'])
@@ -424,17 +474,26 @@ def completions():
     except Exception as e:
         handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
 
-    generation_args = {
-        "max_new_tokens": max_new_tokens,
-        "return_full_text": return_full_text,
-        "temperature": temperature,
-        "do_sample": do_sample,
-        "top_k":top_k,
-        "top_p":top_p,
-        "min_p":min_p
-    }
+    try:
+        generation_args = {
+            "max_new_tokens": int(request.headers.get('X-Max-New-Tokens', str(max_new_tokens))),
+            "return_full_text": request.headers.get('X-Return-Full-Text', str(return_full_text)).lower() == 'true',
+            "temperature": float(request.headers.get('X-Temperature', str(temperature))),
+            "do_sample": request.headers.get('X-Do-Sample', str(do_sample)).lower() == 'true',
+            "top_k": int(request.headers.get('X-Top-K', str(top_k))),
+            "top_p": float(request.headers.get('X-Top-P', str(top_p))),
+            "min_p": float(request.headers.get('X-Min-P', str(min_p)))
+        }
+    except Exception as e:
+        handle_error_no_return("Could not set generation-arguments for /completions, proceeding without them. Encountered error: ", e)
 
-    output = PIPE(messages, **generation_args)
+    try:
+        if generation_args:
+            output = PIPE(messages, **generation_args)
+        else:
+            output = PIPE(messages)
+    except Exception as e:
+        handle_api_error("Could not generate output, encountered error: ", e)
 
     return jsonify({"success": True, "response": output})
 
