@@ -614,6 +614,128 @@ def completions_stream():
     return Response(generate(), content_type='text/event-stream')
 
 
+@app.route('/health')
+def health():
+    try:
+        if PIPE is None:
+            return jsonify(status="error", message="Model not loaded"), 503 # Service Unavailable
+        
+        model_info = {}
+
+        # print(f"\n\nmodel details: {PIPE.model}\n\n")
+        # print(f"\n\nmodel.config details: {PIPE.model.config}\n\n")
+        # print(f"\n\ntokenizer details: {PIPE.tokenizer}\n\n")
+        
+        try:
+            model_info["model_id"] = PIPE.model.config._name_or_path
+        except Exception as e:
+            handle_error_no_return(f"Could not determine model_id, encountered error: {e}")
+
+        try:
+            model_info["transformers_version"] = PIPE.model.config.transformers_version
+        except Exception as e:
+            handle_error_no_return(f"Could not determine transformers_version, encountered error: {e}")
+
+        try:
+            model_info["architecture"] = PIPE.model.config.architectures
+        except Exception as e:
+            handle_error_no_return(f"Could not determine model architecture, encountered error: {e}")
+
+        try:
+            model_info["model_type"] = PIPE.model.config.model_type
+        except Exception as e:
+            handle_error_no_return(f"Could not determine model_type, encountered error: {e}")
+
+        try:
+            model_info["torch_dtype"] = PIPE.model.config.torch_dtype
+        except Exception as e:
+            handle_error_no_return(f"Could not determine torch_dtype, encountered error: {e}")
+
+        try:
+            model_info["device"] = str(PIPE.device)
+        except Exception as e:
+            handle_error_no_return(f"Could not determine inference device, encountered error: {e}")
+
+        try:
+            if hasattr(PIPE.model.config, "quantization_config"):
+                model_info["is_quantized"] = True
+                model_info["quant_method"] = PIPE.model.config.quantization_config.quant_method
+                model_info["quantization_config"] = PIPE.model.config.quantization_config
+            else:
+                model_info["is_quantized"] = False
+        except Exception as e:
+            handle_error_no_return(f"Could not determine quantization status, encountered error: {e}")
+        
+        try:
+            model_info["model_vocab_size"] = PIPE.model.config.vocab_size
+        except Exception as e:
+            handle_error_no_return(f"Could not determine model_vocab_size, attempting to check length of the pipeline-tokenizer, encountered error: {e}")
+            try:
+                model_info["tokenizer_vocab_length"] = len(PIPE.tokenizer)
+            except Exception as e:
+                handle_error_no_return(f"Could not determine length of the pipeline-tokenizer! Encountered error: {e}")
+        
+        try:
+            model_info["tokenizer_vocab_size"] = PIPE.tokenizer.vocab_size
+        except Exception as e:
+            handle_error_no_return(f"Could not determine tokenizer_vocab_size, encountered error: {e}")
+        
+        try:
+            model_info["number_of_hidden_layers"] = PIPE.model.config.num_hidden_layers
+        except Exception as e:
+            handle_error_no_return(f"Could not determine number_of_hidden_layers, encountered error: {e}")
+        
+        try:
+            model_info["number_of_attention_heads"] = PIPE.model.config.num_attention_heads
+        except Exception as e:
+            handle_error_no_return(f"Could not determine number_of_attention_heads, encountered error: {e}")
+
+        try:
+            model_info["hidden_dimensions"] = PIPE.model.config.head_dim
+        except Exception as e:
+            handle_error_no_return(f"Could not determine hidden_dimensions, encountered error: {e}")
+
+        try:
+            model_info["number_of_key_value_heads"] = PIPE.model.config.num_key_value_heads
+        except Exception as e:
+            handle_error_no_return(f"Could not determine number_of_key_value_heads, encountered error: {e}")
+        
+        try:
+            model_info["hidden_activation"] = PIPE.model.config.hidden_act
+        except Exception as e:
+            handle_error_no_return(f"Could not determine hidden_act, encountered error: {e}")
+        
+        try:
+            model_info["hidden_size"] = PIPE.model.config.hidden_size
+        except Exception as e:
+            handle_error_no_return(f"Could not determine hidden_size, encountered error: {e}")
+
+        try:
+            model_info["intermediate_size"] = PIPE.model.config.intermediate_size
+        except Exception as e:
+            handle_error_no_return(f"Could not determine intermediate_size, encountered error: {e}")
+
+        try:
+            model_info["max_position_embeddings"] = PIPE.model.config.max_position_embeddings
+        except Exception as e:
+            handle_error_no_return(f"Could not determine max_position_embeddings, encountered error: {e}")
+
+        try:
+            model_info["tokenizer"] = PIPE.tokenizer.name_or_path
+        except Exception as e:
+            handle_error_no_return(f"Could not determine the tokenizer used, encountered error: {e}")
+
+        try:
+            model_info["max_seq_length"] = PIPE.tokenizer.model_max_length
+        except Exception as e:
+            handle_error_no_return(f"Could not determine the sequence length of the model's tokenizer, encountered error: {e}")
+
+        return jsonify(status="ok", model_info=model_info), 200
+
+    except Exception as e:
+        handle_api_error(f"Error checking hf-server health, encountered error: {e}")
+
+
 
 def main():
     #TODO
