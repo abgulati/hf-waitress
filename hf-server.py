@@ -8,20 +8,59 @@ import traceback
 import argparse
 import logging
 import queue
+import time
 import json
 import uuid
 import sys
 import os
 import io
 
+from functools import wraps
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify, Response
 
 
 app = Flask(__name__)
 
-
 PIPE = None
+BUSY = False
+TIMEOUT = 300   # 5-min timeout
+
+
+#########################------------Threading & Request-Concurrency Queueing-------------###############################
+
+request_queue = queue.Queue(maxsize=11)
+
+def queue_request(func):
+    @wraps(func)
+    def wrapper():
+        
+        if request_queue.full():
+            return jsonify(success=False, error="Server is busy, retry after a while"), 503
+        request_queue.put((func))
+        
+        start_time = time.time()
+        while True:
+            if not BUSY:
+                try:
+                    result = func()
+                finally:
+                    break
+            else:
+                if time.time() - start_time < TIMEOUT:
+                    time.sleep(1)
+                else:
+                    request_queue.get()  # Remove this request from the queue
+                    request_queue.task_done()
+                    return jsonify(success=False, error="Request timed out"), 504
+
+        request_queue.get()
+        request_queue.task_done()
+        return result
+    
+    return wrapper
+
+#########################################################################################################################
 
 
 #########################------------Setup & Handle Logging-------------###############################
@@ -48,38 +87,46 @@ except Exception as e:
 
 
 def handle_api_error(message, exception=None):
-    error_message = f"{message} {str(exception) if exception else '; No exception info.'}".strip()
-    # traceback_details = traceback.format_exc()
-    # full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
+    global BUSY
+    BUSY = True
+    error_message = f"\n\n{message} {str(exception) if exception else '; No exception info.'}\n\n"
+    traceback_details = traceback.format_exc()
+    full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
 
     if logger:
-        logger.error(error_message)
+        logger.error(full_message)
         print(error_message)
     else:
         print(error_message)
+    
+    BUSY = False
     return jsonify(success=False, error=error_message), 500 #internal server error
 
 
 def handle_local_error(message, exception=None):
-    error_message = f"{message} {str(exception) if exception else '; No exception info.'}".strip()
-    # traceback_details = traceback.format_exc()
-    # full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
+    global BUSY
+    BUSY = True
+    error_message = f"\n\n{message} {str(exception) if exception else '; No exception info.'}\n\n"
+    traceback_details = traceback.format_exc()
+    full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
 
     if logger:
-        logger.error(error_message)
+        logger.error(full_message)
         print(error_message)
     else:
         print(error_message)
+    
+    BUSY = False
     raise Exception(exception)
 
 
 def handle_error_no_return(message, exception=None):
-    error_message = f"{message} {str(exception) if exception else '; No exception info.'}".strip()
-    # traceback_details = traceback.format_exc()
-    # full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
+    error_message = f"\n\n{message} {str(exception) if exception else '; No exception info.'}\n\n"
+    traceback_details = traceback.format_exc()
+    full_message = f"\n\n{error_message}\n\nTraceback: {traceback_details}\n\n"
 
     if logger:
-        logger.error(error_message)
+        logger.error(full_message)
         print(error_message)
     else:
         print(error_message)
@@ -194,8 +241,12 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
 # Deviates from typical RESTful principals to use a POST call to fetch values but practical & justifyable because we:
 # 1. Do not want to make the URL huge with a ever-growing list of query-params 2. Do not wish to expose values via query-params
 @app.route('/hf_config_reader_api', methods=['POST'])
+@queue_request
 def hf_config_reader_api():
     # keys = request.args.getlist('keys') # Assuming keys are passed as query parameters
+
+    global BUSY
+    BUSY = True
     
     try:
         keys = request.json.get('keys', []) # Could also do keys = request.json['keys'] but this way we can provide a default list should 'keys' be missing!
@@ -207,12 +258,17 @@ def hf_config_reader_api():
     except Exception as e:
         handle_api_error("Server-side error - could not read keys from hf_config.json. Encountered error: ", e)
     
+    BUSY = False
     return jsonify(success=True, values=values)
 
 
 # Method for API route to write to hf_config.json
 @app.route('/hf_config_writer_api', methods=['POST'])
+@queue_request
 def hf_config_writer_api():
+
+    global BUSY
+    BUSY = True
 
     try:
         config_updates = request.json['config_updates']
@@ -225,6 +281,7 @@ def hf_config_writer_api():
     except Exception as e:
         handle_api_error("Server-side error - could not write keys to hf_config.json. Encountered error: ", e)
     
+    BUSY = False
     return jsonify({"success": write_return['success'], "restart_required": write_return['restart_required']})
 
 
@@ -457,7 +514,11 @@ def initialize_model():
 
 
 @app.route('/completions', methods=['POST'])
+@queue_request
 def completions():
+
+    global BUSY
+    BUSY = True
 
     try:
         data = request.json
@@ -499,6 +560,7 @@ def completions():
     except Exception as e:
         handle_api_error("Could not generate output, encountered error: ", e)
 
+    BUSY = False
     return jsonify({"success": True, "response": output})
 
 
@@ -517,7 +579,11 @@ class CustomStream(io.StringIO):
 
 
 @app.route('/completions_stream', methods=['POST'])
+@queue_request
 def completions_stream():
+
+    global BUSY
+    BUSY = True
 
     print("completions_stream route triggered")
 
@@ -609,15 +675,23 @@ def completions_stream():
         yield "event: END\ndata: null\n\n"
 
         print("LLM stream done")
+        global BUSY
+        BUSY = False
 
     print("\n\nInferencing Begins!\n\n")
     return Response(generate(), content_type='text/event-stream')
 
 
 @app.route('/health')
+@queue_request
 def health():
+
+    global BUSY
+    BUSY = True
+
     try:
         if PIPE is None:
+            BUSY = False
             return jsonify(status="error", message="Model not loaded"), 503 # Service Unavailable
         
         model_info = {}
@@ -730,6 +804,7 @@ def health():
         except Exception as e:
             handle_error_no_return(f"Could not determine the sequence length of the model's tokenizer, encountered error: {e}")
 
+        BUSY = False
         return jsonify(status="ok", model_info=model_info), 200
 
     except Exception as e:
@@ -738,12 +813,8 @@ def health():
 
 
 def main():
-    #TODO
-
     parse_arguments()
-
     initialize_model()
-
     app.run(host='0.0.0.0', port=9069)
 
 
