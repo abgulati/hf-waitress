@@ -50,7 +50,7 @@ python hf_waitress.py [arguments]
 
 ### Command-line Arguments
 
-- `--model_id`: The model ID in HF-Transformers format.
+- `--model_id`: The model ID in HF-Transformers format - see below for details.
 - `--access_gated`: Set to True if accessing gated models you're approved for.
 - `--access_token`: Your Hugging Face Access Token.
 - `--quantize`: Quantization method (e.g., 'bitsandbytes' or 'n' for none).
@@ -68,6 +68,20 @@ python hf_waitress.py [arguments]
 - `--top_k`, `--top_p`, `--min_p`: Token selection parameters.
 - `--port`: Specify the server port (default: 9069).
 - `--reset_to_defaults`: Reset all settings to default values.
+
+### The required `model_id` can typically be obtained one of two ways, both of which involve going to the model's HuggingFace.co page:
+
+1. Simply make use of the copy function provided by HuggingFace:
+
+<p align="center">
+<img src="https://github.com/abgulati/hf-server/blob/main/images/hf-copy.png"  align="center">
+</p>
+
+2. Scroll down the model card a bit and copy it from the code sample provided by the model creators:
+
+<p align="center">
+<img src="https://github.com/abgulati/hf-server/blob/main/images/hf-sample.png"  align="center">
+</p>
 
 ## API Endpoints
 
