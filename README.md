@@ -108,14 +108,16 @@ python hf_waitress.py [arguments]
     - `X-Min-P`: Minimum probability for token consideration
 
     - **Body**: Raw JSON
-        ```
-        json
-        {
-            "messages": [
-            {"role": "user", "content": "Your message here"}
-            ]
-        }
-        ```
+    ```
+    {
+        "messages": [
+            {"role": "system", "content": "You are a helpful AI assistant."},
+            {"role": "user", "content": "Can you provide ways to eat combinations of bananas and dragonfruits?"}, 
+            {"role": "assistant", "content": "Sure! Here are some ways to eat bananas and dragonfruits together: 1. Banana and dragonfruit smoothie: Blend bananas and dragonfruits together with some milk and honey. 2. Banana and dragonfruit salad: Mix sliced bananas and dragonfruits together with some lemon juice and honey."}, 
+            {"role": "user", "content": "What about solving an 2x + 3 = 7 equation?"}
+        ]
+    }
+    ```
 
     - **Response**: JSON object containing the generated completion
 
