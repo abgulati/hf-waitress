@@ -92,6 +92,8 @@ python hf_waitress.py [arguments]
 3. `/health` (GET): Check the health and get information about the loaded model.
 4. `/hf_config_reader_api` (POST): Read values from the configuration.
 5. `/hf_config_writer_api` (POST): Write values to the configuration.
+6. `/restart_server` (GET): Restart the LLM server.
+
 
 ### Details:
 
@@ -134,12 +136,64 @@ python hf_waitress.py [arguments]
 4. `/hf_config_reader_api` (POST): Read values from the configuration.
 
     - **Body**: JSON object with a keys array specifying which config values to read
+        ```
+        {
+            "keys": [
+                "model_id",
+                "quantize",
+                "quant_level",
+                "torch_device_map",
+                "torch_dtype",
+                "use_flash_attention_2",
+                "max_new_tokens"
+            ]
+        }
+        ```
+        
     - **Response**: JSON object containing the requested configuration values
+        ```
+        {
+            "success": true,
+            "values": {
+                "max_new_tokens": 2048,
+                "model_id": "microsoft/Phi-3-mini-128k-instruct",
+                "quant_level": "int8",
+                "quantize": "bitsandbytes",
+                "torch_device_map": "cuda",
+                "torch_dtype": "auto",
+                "use_flash_attention_2": true
+            }
+        }
+        ```
 
 5. `/hf_config_writer_api` (POST): Write values to the configuration.
 
     - **Body**: JSON object with key-value pairs to update in the configuration
+        ```
+        {
+            "config_updates": {
+                "model_id":"microsoft/Phi-3-mini-128k-instruct",
+                "quant_level":"int4"
+            }
+        }
+        ```
     - **Response**: JSON object indicating success and whether a restart is required
+        ```
+        {
+            "restart_required": true,
+            "success": true
+        }
+        ```
+
+6. `/restart_server` (GET): Restart the LLM server.
+
+    - **Body**: None
+    - **Response**: JSON object indicating success or error
+        ```
+        {
+            "success": true
+        }
+        ```
 
 ## Configuration
 

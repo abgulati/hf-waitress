@@ -158,16 +158,10 @@ def write_config(config_updates, filename='hf_config.json'):
 
     #restart logic in write_config() might be unnecessary, circle back later
     restart_required = False
-    triggers_for_hf_restart = ['torch_device_map', 'torch_dtype', 'model_id', 'trust_remote_code', 'attn_implementation', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep']
+    triggers_for_hf_restart = ['torch_device_map', 'torch_dtype', 'model_id', 'trust_remote_code', 'attn_implementation', 'pipeline_task', 'quantize', 'quant_level', 'port', 'use_flash_attention_2']
     for key in config_updates:
         if key in triggers_for_hf_restart and config_updates[key] != hf_config.get(key):
-            try:
-                #server_status = status()    #TO-DO
-                server_status = {'is_online': True}
-                if server_status['is_online']:
-                    restart_required = True
-            except Exception as e:
-                handle_error_no_return("Could not query hf_server status() for write_config, encountered error: ", e)
+            restart_required = True
 
     hf_config.update(config_updates)
 
@@ -811,6 +805,19 @@ def health():
     except Exception as e:
         handle_api_error("Error checking hf-server health, encountered error: ", e)
 
+
+
+@app.route('/restart_server')
+def restart_server():
+    global PIPE
+
+    try:
+        PIPE = None
+        initialize_model()
+    except Exception as e:
+        handle_api_error("Could not restart server, encountered error: ", e)
+    
+    return jsonify(success=True)
 
 
 def main():
