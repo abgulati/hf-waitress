@@ -131,7 +131,51 @@ python hf_waitress.py [arguments]
 
 3. `/health` (GET): Check the health and get information about the loaded model.
 
+    - **Body**: None
     - **Response**: JSON object containing model and server health information
+        ```
+        {
+            "model_info": {
+                "architecture": "['MistralForCausalLM']",
+                "device": "cuda",
+                "hidden_activation": "silu",
+                "hidden_dimensions": "128",
+                "hidden_size": "5120",
+                "intermediate_size": "14336",
+                "is_quantized": true,
+                "max_position_embeddings": "1024000",
+                "max_seq_length": "1000000000000000019884624838656",
+                "memory_footprint": "8137789440",
+                "model_id": "mistralai/Mistral-Nemo-Instruct-2407",
+                "model_type": "mistral",
+                "model_vocab_size": "131072",
+                "number_of_attention_heads": "32",
+                "number_of_hidden_layers": "40",
+                "number_of_key_value_heads": "8",
+                "quant_method": "QuantizationMethod.BITS_AND_BYTES",
+                "quantization_config": "BitsAndBytesConfig {
+                        \"_load_in_4bit\": true,
+                        \"_load_in_8bit\": false,
+                        \"bnb_4bit_compute_dtype\": \"float32\",
+                        \"bnb_4bit_quant_storage\": \"uint8\",
+                        \"bnb_4bit_quant_type\": \"fp4\",
+                        \"bnb_4bit_use_double_quant\": false,
+                        \"llm_int8_enable_fp32_cpu_offload\": false,
+                        \"llm_int8_has_fp16_weight\": false,
+                        \"llm_int8_skip_modules\": null,
+                        \"llm_int8_threshold\": 6.0,
+                        \"load_in_4bit\": true,
+                        \"load_in_8bit\": false,
+                        \"quant_method\": \"bitsandbytes\"
+                    }",
+                "tokenizer": "mistralai/Mistral-Nemo-Instruct-2407",
+                "tokenizer_vocab_size": "131072",
+                "torch_dtype": "torch.bfloat16",
+                "transformers_version": "4.43.0.dev0"
+            },
+            "status": "ok"
+        }
+        ```
 
 4. `/hf_config_reader_api` (POST): Read values from the configuration.
 
