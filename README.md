@@ -71,11 +71,58 @@ python hf_waitress.py [arguments]
 
 ## API Endpoints
 
+### Overview:
+
 1. `/completions` (POST): Generate completions for given messages.
 2. `/completions_stream` (POST): Stream completions for given messages.
 3. `/health` (GET): Check the health and get information about the loaded model.
 4. `/hf_config_reader_api` (POST): Read values from the configuration.
 5. `/hf_config_writer_api` (POST): Write values to the configuration.
+
+### Details:
+
+### 1. `/completions` (POST): Generate completions for given messages.
+
+- **Headers**:
+- `Content-Type: application/json`
+- `X-Max-New-Tokens`: Maximum number of tokens to generate
+- `X-Return-Full-Text`: Whether to return the full text including the prompt
+- `X-Temperature`: Temperature for text generation (0.0 to 2.0)
+- `X-Do-Sample`: Whether to use sampling for text generation
+- `X-Top-K`: Top-K sampling parameter
+- `X-Top-P`: Top-P (nucleus) sampling parameter
+- `X-Min-P`: Minimum probability for token consideration
+
+- **Body**: Raw JSON
+    ```
+    json
+    {
+        "messages": [
+        {"role": "user", "content": "Your message here"}
+        ]
+    }
+
+- **Response**: JSON object containing the generated completion
+
+### 2. `/completions_stream` (POST): Stream completions for given messages.
+
+- **Headers**: Same as /completions
+- **Body**: Same as /completions
+- **Response**: Server-Sent Events (SSE) stream of generated text
+
+### 3. `/health` (GET): Check the health and get information about the loaded model.
+
+- **Response**: JSON object containing model and server health information
+
+### 4. `/hf_config_reader_api` (POST): Read values from the configuration.
+
+- **Body**: JSON object with a keys array specifying which config values to read
+- **Response**: JSON object containing the requested configuration values
+
+### 5. `/hf_config_writer_api` (POST): Write values to the configuration.
+
+- **Body**: JSON object with key-value pairs to update in the configuration
+- **Response**: JSON object indicating success and whether a restart is required
 
 ## Configuration
 
