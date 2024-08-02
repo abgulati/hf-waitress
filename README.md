@@ -29,7 +29,7 @@ HF Waitress is a powerful and flexible server application for deploying and inte
 1. Clone this repository:
 
     ```
-    git clone https://github.com/yourusername/hf-waitress.git
+    git clone https://github.com/abgulati/hf-waitress
     cd hf-waitress
     ```
 
