@@ -1,6 +1,6 @@
-# HF Waitress
+# HF-Waitress
 
-HF Waitress is a powerful and flexible server application for deploying and interacting with Hugging Face Transformers models. It simplifies the process of running open-source Language Models (LLMs) locally, addressing common pain points in model deployment and usage.
+HF-Waitress is a powerful and flexible server application for deploying and interacting with Hugging Face Transformers models. It simplifies the process of running open-source Large Language Models (LLMs) locally, addressing common pain points in model deployment and usage.
 
 ## Key Features
 
@@ -22,7 +22,7 @@ HF Waitress is a powerful and flexible server application for deploying and inte
 
     Download and install the PyTorch version appropriate for your system: https://pytorch.org/get-started/locally/
 
-3. (optional) If attempting to use Flash Attention 2, specific Nvidia GPUs are required. Check the [official-repo](https://github.com/Dao-AILab/flash-attention) for requirements and installation instructions.
+3. (optional) If attempting to use Flash Attention 2, specific Nvidia GPUs are required. Check the [official-repo](https://github.com/Dao-AILab/flash-attention?tab=readme-ov-file#installation-and-features) for requirements and installation instructions.
 
 ## Installation
 
@@ -59,7 +59,7 @@ python hf_waitress.py [arguments]
 - `--torch_device_map`: Specify inference device (e.g., 'cuda', 'cpu').
 - `--torch_dtype`: Specify model tensor type.
 - `--trust_remote_code`: Allow execution of custom code from the model's repository.
-- `--use_flash_attention_2`: Attempt to use Flash Attention 2 - [Only for specific Nvidia GPUs](https://github.com/Dao-AILab/flash-attention) 
+- `--use_flash_attention_2`: Attempt to use Flash Attention 2 - [Only for specific Nvidia GPUs](https://github.com/Dao-AILab/flash-attention?tab=readme-ov-file#installation-and-features) 
 - `--pipeline_task`: Specify the pipeline task (default: 'text-generation').
 - `--max_new_tokens`: Maximum number of tokens to generate.
 - `--return_full_text`: Return the full text including the prompt.
