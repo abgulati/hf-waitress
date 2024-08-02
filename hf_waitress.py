@@ -687,7 +687,12 @@ def health():
                     model_info["is_quantized"] = False
             except Exception as e:
                 handle_error_no_return("Could not determine quantization status, encountered error: ", e)
-            
+
+            try:
+                model_info["memory_footprint"] = str(PIPE.model.get_memory_footprint())
+            except Exception as e:
+                handle_error_no_return("Could not determine memory_footprint, encountered error: ", e)
+
             try:
                 model_info["model_vocab_size"] = str(PIPE.model.config.vocab_size)
             except Exception as e:
