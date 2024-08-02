@@ -219,6 +219,7 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
                 'top_p':0.95, 
                 'min_p':0.05, 
                 'n_keep':0,
+                'port':9069
             }.get(key, 'undefined')
 
             if default_value == 'undefined':
@@ -334,7 +335,7 @@ def parse_arguments():
 
     # Even if a parser object could not be created, a read_request will write & return defaults 
     try:
-        read_return = read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+        read_return = read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
         access_gated = str(read_return['access_gated']).lower() == 'true'
         access_token = str(read_return['access_token'])
         model_id = str(read_return['model_id'])
@@ -354,6 +355,7 @@ def parse_arguments():
         top_p = float(read_return['top_p'])
         min_p = float(read_return['min_p'])
         n_keep = int(read_return['n_keep'])
+        port = int(read_return['port'])
     except Exception as e:
         handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
 
@@ -379,6 +381,7 @@ def parse_arguments():
         parser.add_argument("--top_p", type=float, default=top_p, help="Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P. Remembers previously set value and falls-back to 0.95 as a default.")
         parser.add_argument("--min_p", type=float, default=min_p, help="The minimum probability for a token to be considered, relative to the probability of the most likely token. Remembers previously set value and falls-back to 0.05 as a default.")
         parser.add_argument("--n_keep", type=int, default=n_keep, help="Specify the number of tokens from the prompt to retain when the context size is exceeded and tokens need to be discarded. Remembers previously set value and falls-back to 0 as a default, meaning no tokens are kept. Use -1 to retain all tokens from the prompt.")
+        parser.add_argument("--port", type=int, default=port, help="Specify the port to be used by the server. Remembers previously set value and falls-back to 9069 as a default.")
 
         args = parser.parse_args()
         print(f"\n\nparser.parse_args():\n\n{args}\n\n")
@@ -391,7 +394,7 @@ def parse_arguments():
                     json.dump({}, file, indent=4)
                 
                 # Set defaults
-                read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep'])
+                read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
 
             except Exception as e:
                 handle_local_error("Could not reset hf_config.json, encountered error: ", e)
@@ -416,7 +419,8 @@ def parse_arguments():
                     'top_k':args.top_k, 
                     'top_p':args.top_p, 
                     'min_p':args.min_p, 
-                    'n_keep':args.n_keep
+                    'n_keep':args.n_keep,
+                    'port':args.port
                 })
             except Exception as e:
                 handle_local_error("Could not write launch arguments to hf_config.json, encountered error: ", e)
@@ -427,8 +431,10 @@ def parse_arguments():
                 except Exception as e:
                     handle_local_error("Login to HF-Hub unsuccessful, encountered error: ", e)
 
-    #return parser.parse_args()
-    return True
+        return args
+    
+    # Return None if parser was not created
+    return None
 
 
 def initialize_model():
@@ -640,17 +646,12 @@ def completions_stream():
 
             try:
                 streamer = TextStreamer(PIPE.tokenizer, skip_special_tokens=True)
-            except Exception as e:
-                handle_api_error("Could not create TextStreamer for completions_stream. Try using the /completions endpoint instead. Encountered error: ", e)
-            
-            try:
+
                 if generation_args:
                     generation_args["streamer"] = streamer
                     output = PIPE(messages, **generation_args)
                 else:
                     output = PIPE(messages, streamer=streamer)
-            except Exception as e:
-                handle_api_error("Could not generate output, encountered error: ", e)
             finally:
                 sys.stdout = original_stdout
 
@@ -701,121 +702,122 @@ def health():
         # print(f"\n\ntokenizer details: {PIPE.tokenizer}\n\n")
         
         try:
-            model_info["model_id"] = PIPE.model.config._name_or_path
+            model_info["model_id"] = str(PIPE.model.config._name_or_path)
         except Exception as e:
-            handle_error_no_return(f"Could not determine model_id, encountered error: {e}")
+            handle_error_no_return("Could not determine model_id, encountered error: ", e)
 
         try:
-            model_info["transformers_version"] = PIPE.model.config.transformers_version
+            model_info["transformers_version"] = str(PIPE.model.config.transformers_version)
         except Exception as e:
-            handle_error_no_return(f"Could not determine transformers_version, encountered error: {e}")
+            handle_error_no_return("Could not determine transformers_version, encountered error: ", e)
 
         try:
-            model_info["architecture"] = PIPE.model.config.architectures
+            model_info["architecture"] = str(PIPE.model.config.architectures)
         except Exception as e:
-            handle_error_no_return(f"Could not determine model architecture, encountered error: {e}")
+            handle_error_no_return("Could not determine model architecture, encountered error: ", e)
 
         try:
-            model_info["model_type"] = PIPE.model.config.model_type
+            model_info["model_type"] = str(PIPE.model.config.model_type)
         except Exception as e:
-            handle_error_no_return(f"Could not determine model_type, encountered error: {e}")
+            handle_error_no_return("Could not determine model_type, encountered error: ", e)
 
         try:
-            model_info["torch_dtype"] = PIPE.model.config.torch_dtype
+            model_info["torch_dtype"] = str(PIPE.model.config.torch_dtype)
         except Exception as e:
-            handle_error_no_return(f"Could not determine torch_dtype, encountered error: {e}")
+            handle_error_no_return("Could not determine torch_dtype, encountered error: ", e)
 
         try:
             model_info["device"] = str(PIPE.device)
         except Exception as e:
-            handle_error_no_return(f"Could not determine inference device, encountered error: {e}")
+            handle_error_no_return("Could not determine inference device, encountered error: ", e)
 
         try:
             if hasattr(PIPE.model.config, "quantization_config"):
                 model_info["is_quantized"] = True
-                model_info["quant_method"] = PIPE.model.config.quantization_config.quant_method
-                model_info["quantization_config"] = PIPE.model.config.quantization_config
+                model_info["quant_method"] = str(PIPE.model.config.quantization_config.quant_method)
+                model_info["quantization_config"] = str(PIPE.model.config.quantization_config)
             else:
                 model_info["is_quantized"] = False
         except Exception as e:
-            handle_error_no_return(f"Could not determine quantization status, encountered error: {e}")
+            handle_error_no_return("Could not determine quantization status, encountered error: ", e)
         
         try:
-            model_info["model_vocab_size"] = PIPE.model.config.vocab_size
+            model_info["model_vocab_size"] = str(PIPE.model.config.vocab_size)
         except Exception as e:
-            handle_error_no_return(f"Could not determine model_vocab_size, attempting to check length of the pipeline-tokenizer, encountered error: {e}")
+            handle_error_no_return("Could not determine model_vocab_size, attempting to check length of the pipeline-tokenizer, encountered error: ", e)
             try:
                 model_info["tokenizer_vocab_length"] = len(PIPE.tokenizer)
             except Exception as e:
-                handle_error_no_return(f"Could not determine length of the pipeline-tokenizer! Encountered error: {e}")
+                handle_error_no_return("Could not determine length of the pipeline-tokenizer! Encountered error: ", e)
         
         try:
-            model_info["tokenizer_vocab_size"] = PIPE.tokenizer.vocab_size
+            model_info["tokenizer_vocab_size"] = str(PIPE.tokenizer.vocab_size)
         except Exception as e:
-            handle_error_no_return(f"Could not determine tokenizer_vocab_size, encountered error: {e}")
+            handle_error_no_return("Could not determine tokenizer_vocab_size, encountered error: ", e)
         
         try:
-            model_info["number_of_hidden_layers"] = PIPE.model.config.num_hidden_layers
+            model_info["number_of_hidden_layers"] = str(PIPE.model.config.num_hidden_layers)
         except Exception as e:
-            handle_error_no_return(f"Could not determine number_of_hidden_layers, encountered error: {e}")
+            handle_error_no_return("Could not determine number_of_hidden_layers, encountered error: ", e)
         
         try:
-            model_info["number_of_attention_heads"] = PIPE.model.config.num_attention_heads
+            model_info["number_of_attention_heads"] = str(PIPE.model.config.num_attention_heads)
         except Exception as e:
-            handle_error_no_return(f"Could not determine number_of_attention_heads, encountered error: {e}")
+            handle_error_no_return("Could not determine number_of_attention_heads, encountered error: ", e)
 
         try:
-            model_info["hidden_dimensions"] = PIPE.model.config.head_dim
+            model_info["hidden_dimensions"] = str(PIPE.model.config.head_dim)
         except Exception as e:
-            handle_error_no_return(f"Could not determine hidden_dimensions, encountered error: {e}")
+            handle_error_no_return("Could not determine hidden_dimensions, encountered error: ", e)
 
         try:
-            model_info["number_of_key_value_heads"] = PIPE.model.config.num_key_value_heads
+            model_info["number_of_key_value_heads"] = str(PIPE.model.config.num_key_value_heads)
         except Exception as e:
-            handle_error_no_return(f"Could not determine number_of_key_value_heads, encountered error: {e}")
+            handle_error_no_return("Could not determine number_of_key_value_heads, encountered error: ", e)
         
         try:
-            model_info["hidden_activation"] = PIPE.model.config.hidden_act
+            model_info["hidden_activation"] = str(PIPE.model.config.hidden_act)
         except Exception as e:
-            handle_error_no_return(f"Could not determine hidden_act, encountered error: {e}")
+            handle_error_no_return("Could not determine hidden_act, encountered error: ", e)
         
         try:
-            model_info["hidden_size"] = PIPE.model.config.hidden_size
+            model_info["hidden_size"] = str(PIPE.model.config.hidden_size)
         except Exception as e:
-            handle_error_no_return(f"Could not determine hidden_size, encountered error: {e}")
+            handle_error_no_return("Could not determine hidden_size, encountered error: ", e)
 
         try:
-            model_info["intermediate_size"] = PIPE.model.config.intermediate_size
+            model_info["intermediate_size"] = str(PIPE.model.config.intermediate_size)
         except Exception as e:
-            handle_error_no_return(f"Could not determine intermediate_size, encountered error: {e}")
+            handle_error_no_return("Could not determine intermediate_size, encountered error: ", e)
 
         try:
-            model_info["max_position_embeddings"] = PIPE.model.config.max_position_embeddings
+            model_info["max_position_embeddings"] = str(PIPE.model.config.max_position_embeddings)
         except Exception as e:
-            handle_error_no_return(f"Could not determine max_position_embeddings, encountered error: {e}")
+            handle_error_no_return("Could not determine max_position_embeddings, encountered error: ", e)
 
         try:
-            model_info["tokenizer"] = PIPE.tokenizer.name_or_path
+            model_info["tokenizer"] = str(PIPE.tokenizer.name_or_path)
         except Exception as e:
-            handle_error_no_return(f"Could not determine the tokenizer used, encountered error: {e}")
+            handle_error_no_return("Could not determine the tokenizer used, encountered error: ", e)
 
         try:
-            model_info["max_seq_length"] = PIPE.tokenizer.model_max_length
+            model_info["max_seq_length"] = str(PIPE.tokenizer.model_max_length)
         except Exception as e:
-            handle_error_no_return(f"Could not determine the sequence length of the model's tokenizer, encountered error: {e}")
+            handle_error_no_return("Could not determine the sequence length of the model's tokenizer, encountered error: ", e)
 
         BUSY = False
         return jsonify(status="ok", model_info=model_info), 200
 
     except Exception as e:
-        handle_api_error(f"Error checking hf-server health, encountered error: {e}")
+        handle_api_error("Error checking hf-server health, encountered error: ", e)
 
 
 
 def main():
-    parse_arguments()
+    args = parse_arguments()
     initialize_model()
-    app.run(host='0.0.0.0', port=9069)
+    port = getattr(args, 'port', 9069)
+    app.run(host='0.0.0.0', port=port)
 
 
 if __name__ == '__main__':
