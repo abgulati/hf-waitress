@@ -77,7 +77,7 @@ python hf_waitress.py [arguments]
 <img src="https://github.com/abgulati/hf-server/blob/main/images/hf-copy.png"  align="center">
 </p>
 
-2. Scroll down the model card a bit and copy it from the code sample provided by the model creators:
+2. Or, scroll further down the model card and copy the model_id from the code sample provided by the model creators:
 
 <p align="center">
 <img src="https://github.com/abgulati/hf-server/blob/main/images/hf-sample.png"  align="center">
@@ -95,7 +95,7 @@ python hf_waitress.py [arguments]
 
 ### Details:
 
-### 1. `/completions` (POST): Generate completions for given messages.
+1. `/completions` (POST): Generate completions for given messages.
 
 - **Headers**:
 - `Content-Type: application/json`
@@ -118,22 +118,22 @@ python hf_waitress.py [arguments]
 
 - **Response**: JSON object containing the generated completion
 
-### 2. `/completions_stream` (POST): Stream completions for given messages.
+2. `/completions_stream` (POST): Stream completions for given messages.
 
 - **Headers**: Same as /completions
 - **Body**: Same as /completions
 - **Response**: Server-Sent Events (SSE) stream of generated text
 
-### 3. `/health` (GET): Check the health and get information about the loaded model.
+3. `/health` (GET): Check the health and get information about the loaded model.
 
 - **Response**: JSON object containing model and server health information
 
-### 4. `/hf_config_reader_api` (POST): Read values from the configuration.
+4. `/hf_config_reader_api` (POST): Read values from the configuration.
 
 - **Body**: JSON object with a keys array specifying which config values to read
 - **Response**: JSON object containing the requested configuration values
 
-### 5. `/hf_config_writer_api` (POST): Write values to the configuration.
+5. `/hf_config_writer_api` (POST): Write values to the configuration.
 
 - **Body**: JSON object with key-value pairs to update in the configuration
 - **Response**: JSON object indicating success and whether a restart is required
