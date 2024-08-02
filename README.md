@@ -115,6 +115,7 @@ python hf_waitress.py [arguments]
             {"role": "user", "content": "Your message here"}
             ]
         }
+        ```
 
     - **Response**: JSON object containing the generated completion
 
