@@ -59,7 +59,7 @@ python hf_waitress.py [arguments]
 - `--torch_device_map`: Specify inference device (e.g., 'cuda', 'cpu').
 - `--torch_dtype`: Specify model tensor type.
 - `--trust_remote_code`: Allow execution of custom code from the model's repository.
-- `--use_flash_attention_2`: Attempt to use Flash Attention 2. Only for specific Nvidia GPUs, check the [official-repo](https://github.com/Dao-AILab/flash-attention) 
+- `--use_flash_attention_2`: Attempt to use Flash Attention 2 - [Only for specific Nvidia GPUs](https://github.com/Dao-AILab/flash-attention) 
 - `--pipeline_task`: Specify the pipeline task (default: 'text-generation').
 - `--max_new_tokens`: Maximum number of tokens to generate.
 - `--return_full_text`: Return the full text including the prompt.
