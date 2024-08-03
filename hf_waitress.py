@@ -167,8 +167,11 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
                     'access_gated':False,
                     'access_token':"",
                     'model_id':"microsoft/Phi-3-mini-4k-instruct",
+                    'gguf':False,
+                    'gguf_model_id':None,
+                    'gguf_filename':None,
                     'quantize':"bitsandbytes",
-                    'quant_level':"int8",
+                    'quant_level':"int4",
                     'push_to_hub':False,
                     'torch_device_map':"auto", 
                     'torch_dtype':"auto", 
@@ -289,7 +292,7 @@ def parse_arguments():
 
     # Even if a parser object could not be created, a read_request will write & return defaults 
     try:
-        read_return = read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
+        read_return = read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
         access_gated = str(read_return['access_gated']).lower() == 'true'
         access_token = str(read_return['access_token'])
         model_id = str(read_return['model_id'])
@@ -319,13 +322,16 @@ def parse_arguments():
         parser.add_argument("--access_gated", action="store_true", default=access_gated, help="Specify True if you will be accessing gated models you've been approved to access")
         parser.add_argument("--access_token", type=str, default=access_token, help="Access Token obtained from HF-Settings -> Access Tokens")
         parser.add_argument("--model_id", type=str, default=model_id, help="model_id for for LLM in HF-Transformers format obtained from the model card. Remembers previously set value and falls-back to Phi3-mini-4k-instruct as the default.")
+        parser.add_argument("--gguf", action="store_true", default=False, help="Add this flag if you'll be loading a GGUF LLM. Defaults to False.")
+        parser.add_argument("--gguf_model_id", type=str, default=None, help="GGUF model_id of the target repo. Defaults to None")
+        parser.add_argument("--gguf_filename", type=str, default=None, help="GGUF filename from the target repo. Defaults to None")
         parser.add_argument("--quantize", type=str, default=quantize, help="Quantization method to be utilized. Simply type 'n' to not use quantization. Remembers previously set value and falls-back to bitsandbytes as the default.")
         parser.add_argument("--quant_level", type=str, default=quant_level, help="Specify quantization level, for example int8, int4, etc. Remembers previously set value and falls-back to int8 as the default.")
         parser.add_argument("--push_to_hub", action="store_true", default=push_to_hub, help="Push quantized LLM to your HF-hub. Remembers previously set value and falls-back to False as the default.")
         parser.add_argument("--torch_device_map", type=str, default=torch_device_map, help="Specify inference device, example: cuda. Remembers previously set value and falls-back to auto as the default.")
         parser.add_argument("--torch_dtype", type=str, default=torch_dtype, help="Specify model tensor type, example: bfloat16. Remembers previously set value and falls-back to auto as the default.")
-        parser.add_argument("-trust_remote_code", action="store_true", default=trust_remote_code, help="Allows the model to execute custom code that's part of the model's HF-repository. Remembers previously set value and falls-back to False by default as a security measure to prevent potentially malicious code from running automatically.")
-        parser.add_argument("--use_flash_attention_2", action="store_true", default=use_flash_attention_2, help="Set to True to attempt using Flash Attention 2. Remembers previously set value and falls-back to False as a default. Failed attempt to use FA2 will proceed to load the model without FA2.")
+        parser.add_argument("--trust_remote_code", action="store_true", default=trust_remote_code, help="Allows the model to execute custom code that's part of the model's HF-repository. Remembers previously set value and falls-back to False by default as a security measure to prevent potentially malicious code from running automatically.")
+        parser.add_argument("--use_flash_attention_2", action="store_true", default=False, help="Set to True to attempt using Flash Attention 2. Defaults to False. Failed attempt to use FA2 will proceed to load the model without FA2.")
         parser.add_argument("--pipeline_task", type=str, default=pipeline_task, help="Defaults to text-generation. For more details, open a Python shell, `import transformers`, and Run `help(transfomers.pipeline)`.")
         parser.add_argument("--max_new_tokens", type=int, default=max_new_tokens, help="Set a hard limit on the maximum number of tokens an LLM can generate when responding. Remembers previously set value and falls-back to 500 as a default.")
         parser.add_argument("--return_full_text", action="store_true", default=return_full_text, help="When set to True, the LLM response contains the entire messages list with the latest response appended at the end.")
@@ -350,7 +356,7 @@ def parse_arguments():
                 config_writer_semaphore.release()
                 
                 # Set defaults
-                read_config(['access_gated', 'access_token', 'model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
+                read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
 
             except Exception as e:
                 handle_local_error("Could not reset hf_config.json, encountered error: ", e)
@@ -360,6 +366,9 @@ def parse_arguments():
                     'access_gated':args.access_gated,
                     'access_token':args.access_token,
                     'model_id':args.model_id,
+                    'gguf':args.gguf,
+                    'gguf_model_id':args.gguf_model_id,
+                    'gguf_filename':args.gguf_filename,
                     'quantize':args.quantize,
                     'quant_level':args.quant_level,
                     'push_to_hub':args.push_to_hub, 
@@ -398,8 +407,11 @@ def initialize_model():
     global PIPE
 
     try:
-        read_return = read_config(['model_id', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
+        read_return = read_config(['model_id', 'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
         model_id = str(read_return['model_id'])
+        gguf = str(read_return['gguf']).lower() == 'true'
+        gguf_model_id = str(read_return['gguf_model_id'])
+        gguf_filename = str(read_return['gguf_filename'])
         quantize = str(read_return['quantize'])
         quant_level = str(read_return['quant_level'])
         push_to_hub = str(read_return['push_to_hub']).lower() == 'true'
@@ -410,6 +422,28 @@ def initialize_model():
         pipeline_task = str(read_return['pipeline_task'])
     except Exception as e:
         handle_local_error("Could not read values from hf_config.json when trying to parse_arguments(), encountered error: ", e)
+
+    if gguf:
+        print(gguf)
+        print("\n\nLoading GGUF\n\n")
+        try:
+            model = AutoModelForCausalLM.from_pretrained(gguf_model_id, gguf_file=gguf_filename)
+        except Exception as e:
+            handle_local_error("Could not create AutoModelForCausalLM, encountered error: ", e)
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(gguf_model_id, gguf_file=gguf_filename)
+        except Exception as e:
+            handle_local_error("Could not set AutoTokenizer, encountered error: ", e)
+        try:
+            PIPE = pipeline(
+                pipeline_task,
+                model=model,
+                tokenizer=tokenizer,
+            )
+        except Exception as e:
+            handle_local_error("Could not create model PIPELINE, encountered error: ", e)
+
+        return True
 
     model_params = {
         "device_map": torch_device_map,

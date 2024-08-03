@@ -4,7 +4,7 @@ HF-Waitress is a powerful and flexible server application for deploying and inte
 
 ## Key Features
 
-- **On-the-fly, in-place quantization**: Supports int8 & int4 quantization via BitsAndBytes.
+- **On-the-fly, in-place quantization**: Supports int8 & int4 quantization via BitsAndBytes and Quanto.
 - **Model Agnosticism**: Compatible with any HF-Transformers format LLM.
 - **Configuration Management**: Uses `config.json` to store settings, allowing for easy configuration and persistence across runs.
 - **Error Handling**: Detailed logging and traceback reporting via centralized error-handling functions.
@@ -53,7 +53,10 @@ python hf_waitress.py [arguments]
 - `--model_id`: The model ID in HF-Transformers format - see below for details.
 - `--access_gated`: Set to True if accessing gated models you're approved for.
 - `--access_token`: Your Hugging Face Access Token.
-- `--quantize`: Quantization method (e.g., 'bitsandbytes' or 'n' for none).
+- `--gguf`: Add this flag if attempting to load a GGUF model, defaults to False - [Only specific models and quants](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf_model_id`: GGUF repository ID, defaults to None - [Only specific models and quants](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf_filename`: Specific GGUF filename, defaults to None - [Only specific models and quants](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--quantize`: Quantization method (e.g., 'bitsandbytes', 'quanto', or 'n' for none).
 - `--quant_level`: Quantization level (e.g., 'int8', 'int4').
 - `--push_to_hub`: Push quantized model to Hugging Face Hub.
 - `--torch_device_map`: Specify inference device (e.g., 'cuda', 'cpu').
