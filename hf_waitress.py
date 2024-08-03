@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, TextStreamer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, TextStreamer, BitsAndBytesConfig, QuantoConfig
 from huggingface_hub import login
 import torch
 
@@ -438,6 +438,18 @@ def initialize_model():
                     model_params["quantization_config"] = quantization_config
             except Exception as e:
                 handle_local_error("Could not set BitsAndBytes config to initialize_model(), encountered error: ", e)
+        elif quantize == "quanto":
+            print("Quanto-Quantizing")
+            quant_level = quant_level.lower().strip()
+
+            if quant_level == "int8":
+                print("Proceeding with Quanto-Int8 Weights")
+                quantization_config  = QuantoConfig(weights="int8")
+                model_params["quantization_config"] = quantization_config
+            elif quant_level == "int4":
+                print("Proceeding with Quanto-Int4 Weights")
+                quantization_config  = QuantoConfig(weights="int4")
+                model_params["quantization_config"] = quantization_config
 
     try:
         model = AutoModelForCausalLM.from_pretrained(model_id, **model_params)
