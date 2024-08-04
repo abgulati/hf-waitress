@@ -53,11 +53,12 @@ python hf_waitress.py [arguments]
 - `--model_id`: The model ID in HF-Transformers format - see below for details.
 - `--access_gated`: Set to True if accessing gated models you're approved for.
 - `--access_token`: Your Hugging Face Access Token.
-- `--gguf`: Add this flag if attempting to load a GGUF model, defaults to False - [Only specific models and quants](https://huggingface.co/docs/transformers/main/en/gguf)
-- `--gguf_model_id`: GGUF repository ID, defaults to None - [Only specific models and quants](https://huggingface.co/docs/transformers/main/en/gguf)
-- `--gguf_filename`: Specific GGUF filename, defaults to None - [Only specific models and quants](https://huggingface.co/docs/transformers/main/en/gguf)
-- `--quantize`: Quantization method (e.g., 'bitsandbytes', 'quanto', or 'n' for none).
-- `--quant_level`: Quantization level (e.g., 'int8', 'int4').
+- `--gguf`: Add this flag if attempting to load a GGUF model, defaults to False - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf_model_id`: GGUF repository ID, defaults to None - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf_filename`: Specific GGUF filename, defaults to None - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--quantize`: Quantization method ('bitsandbytes', 'quanto', 'hqq' or 'n' for none, see important details below.).
+- `--quant_level`: Quantization level (Valid values: int8 & int4 for BitsAndBytes and Quanto; int8, int4, int3, int2, int1 for HQQ.).
+- `--hqq_group_size`: Specify group_size (default: 64) for HQQ quantization. No restrictions as long as weight.numel() is divisible by the group_size.
 - `--push_to_hub`: Push quantized model to Hugging Face Hub.
 - `--torch_device_map`: Specify inference device (e.g., 'cuda', 'cpu').
 - `--torch_dtype`: Specify model tensor type.
@@ -85,6 +86,49 @@ python hf_waitress.py [arguments]
 <p align="center">
 <img src="https://github.com/abgulati/hf-server/blob/main/images/hf-sample.png"  align="center">
 </p>
+
+### Quantizing LLMs
+
+- Several Quantization methods are available in HF-Waitress: BitsAndBytes, Quanto, HQQ, and the ability to run AWQ models directly off the HF-Hub
+
+- BitsAndBytes:
+    - Requires: Nvidia CUDA-supported GPU
+    - Supported Quantization Levels: int8 and int4
+    - Recommended quant technique for Nvidia GPU owners as this is the best and fastest quantization method available.
+
+- Quanto:
+    - Native PyTorch Quantization technique - versatile pytorch quantization toolkit. 
+    - The quantization method used is the linear quantization. 
+    - Supports: CPU, GPU, Apple Silicon
+    - Supported Quantization Levels: int8, int4 and int2
+    - No significant memory-savings observed, but boasts broader hardware compatibility.
+
+- HQQ:
+    - Half-Quadratic Quantization (HQQ) implements on-the-fly quantization via fast robust optimization. It doesn’t require calibration data and can be used to quantize any model.
+    - Supports: CPU, GPU
+    - Supported Quantization Levels: int8, int4, int3, int2 and int1
+
+- AWQ:
+    - Activation-aware Weight Quantization (AWQ) doesn’t quantize all the weights in a model, and instead, it preserves a small percentage of weights that are important for LLM performance. 
+    - This significantly reduces quantization loss such that you can run models in 4-bit precision without experiencing any performance degradation.
+    - Supports: GPUs: Nvidia CUDA and AMD ROCm supported GPUs
+    - See section below for running these models
+
+### Loading AWQ-Quantized Models:
+
+- There are several libraries for quantizing models with the AWQ algorithm, such as llm-awq, autoawq or optimum-intel. 
+- Transformers ONLY supports loading models quantized with the llm-awq and autoawq libraries
+- For models quantized with `autoawq`, install the AutoAWQ PIP package:
+    ```
+    pip install autoawq
+    ```
+- NOTE: As of this writing, AutoAWQ requires Torch 2.3.x. If you have another version of Torch already installed (such as for CUDA-12.4 etc), you can try to run the above with "--no-deps": `pip install --no-deps autoawq`. in my testing, AWQ models work fine this way, but YMMV.
+
+- To run models on the HuggingFace-Hub in the AWQ format, simply specify the model_id as normal and set `quantize=n` & `torch_dtype=torch.float16` at launch:
+    ```
+    python .\hf_waitress.py --model_id=hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4 --quantize=n --torch_dtype=torch.float16
+    ```
+
 
 ## API Endpoints
 
