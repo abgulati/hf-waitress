@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, TextStreamer, BitsAndBytesConfig, QuantoConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, TextStreamer, BitsAndBytesConfig, QuantoConfig, HqqConfig
 from huggingface_hub import login
 import torch
 
@@ -170,8 +170,9 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
                     'gguf':False,
                     'gguf_model_id':None,
                     'gguf_filename':None,
-                    'quantize':"bitsandbytes",
+                    'quantize':"quanto",
                     'quant_level':"int4",
+                    'hqq_group_size':64,
                     'push_to_hub':False,
                     'torch_device_map':"auto", 
                     'torch_dtype':"auto", 
@@ -292,12 +293,13 @@ def parse_arguments():
 
     # Even if a parser object could not be created, a read_request will write & return defaults 
     try:
-        read_return = read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
+        read_return = read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
         access_gated = str(read_return['access_gated']).lower() == 'true'
         access_token = str(read_return['access_token'])
         model_id = str(read_return['model_id'])
         quantize = str(read_return['quantize'])
         quant_level = str(read_return['quant_level'])
+        hqq_group_size = int(read_return['hqq_group_size'])
         push_to_hub = str(read_return['push_to_hub']).lower() == 'true'
         torch_device_map = str(read_return['torch_device_map'])
         torch_dtype = str(read_return['torch_dtype'])
@@ -326,7 +328,8 @@ def parse_arguments():
         parser.add_argument("--gguf_model_id", type=str, default=None, help="GGUF model_id of the target repo. Defaults to None")
         parser.add_argument("--gguf_filename", type=str, default=None, help="GGUF filename from the target repo. Defaults to None")
         parser.add_argument("--quantize", type=str, default=quantize, help="Quantization method to be utilized. Simply type 'n' to not use quantization. Remembers previously set value and falls-back to bitsandbytes as the default.")
-        parser.add_argument("--quant_level", type=str, default=quant_level, help="Specify quantization level, for example int8, int4, etc. Remembers previously set value and falls-back to int8 as the default.")
+        parser.add_argument("--quant_level", type=str, default=quant_level, help="Specify quantization level. Valid values -  BitsAndBytes: int8 & int4; Quanto: int8, int4 and int2; HQQ: int8, int4, int3, int2, int1. Remembers previously set value and falls-back to int8 as the default.")
+        parser.add_argument("--hqq_group_size", type=int, default=hqq_group_size, help="Specify group_size for HQQ quantization. No restrictions as long as weight.numel() is divisible by the group_size. Remembers previously set value and falls-back to 64 as a default.")
         parser.add_argument("--push_to_hub", action="store_true", default=push_to_hub, help="Push quantized LLM to your HF-hub. Remembers previously set value and falls-back to False as the default.")
         parser.add_argument("--torch_device_map", type=str, default=torch_device_map, help="Specify inference device, example: cuda. Remembers previously set value and falls-back to auto as the default.")
         parser.add_argument("--torch_dtype", type=str, default=torch_dtype, help="Specify model tensor type, example: bfloat16. Remembers previously set value and falls-back to auto as the default.")
@@ -356,7 +359,7 @@ def parse_arguments():
                 config_writer_semaphore.release()
                 
                 # Set defaults
-                read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
+                read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
 
             except Exception as e:
                 handle_local_error("Could not reset hf_config.json, encountered error: ", e)
@@ -371,6 +374,7 @@ def parse_arguments():
                     'gguf_filename':args.gguf_filename,
                     'quantize':args.quantize,
                     'quant_level':args.quant_level,
+                    'hqq_group_size':args.hqq_group_size,
                     'push_to_hub':args.push_to_hub, 
                     'torch_device_map':args.torch_device_map, 
                     'torch_dtype':args.torch_dtype, 
@@ -402,18 +406,35 @@ def parse_arguments():
     return None
 
 
+def str_to_torch_dtype(dtype_str):
+    dtype_map = {
+        "torch.float16": torch.float16,
+        "torch.float32": torch.float32,
+        "torch.float64": torch.float64,
+        "torch.int8": torch.int8,
+        "torch.int16": torch.int16,
+        "torch.int32": torch.int32,
+        "torch.int64": torch.int64,
+        "torch.uint8": torch.uint8,
+        "torch.bool": torch.bool,
+        "torch.bfloat16": torch.bfloat16,
+    }
+    return dtype_map.get(dtype_str, None)
+
+
 def initialize_model():
 
     global PIPE
 
     try:
-        read_return = read_config(['model_id', 'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
+        read_return = read_config(['model_id', 'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
         model_id = str(read_return['model_id'])
         gguf = str(read_return['gguf']).lower() == 'true'
         gguf_model_id = str(read_return['gguf_model_id'])
         gguf_filename = str(read_return['gguf_filename'])
         quantize = str(read_return['quantize'])
         quant_level = str(read_return['quant_level'])
+        hqq_group_size = int(read_return['hqq_group_size'])
         push_to_hub = str(read_return['push_to_hub']).lower() == 'true'
         torch_device_map = str(read_return['torch_device_map'])
         torch_dtype = str(read_return['torch_dtype'])
@@ -445,9 +466,14 @@ def initialize_model():
 
         return True
 
+    torch_dtype_obj = str_to_torch_dtype(torch_dtype)
+    if torch_dtype_obj is None:
+        handle_error_no_return("Could not obtain torch dtype object, double-check the value passed is correct. Setting to auto and proceeding.")
+        torch_dtype_obj = "auto"
+
     model_params = {
         "device_map": torch_device_map,
-        "torch_dtype": torch_dtype,
+        "torch_dtype": torch_dtype_obj,
         "trust_remote_code": trust_remote_code,
     }
 
@@ -470,6 +496,11 @@ def initialize_model():
                     print("Proceeding with BitsAndBytes-Int4 Quant")
                     quantization_config = BitsAndBytesConfig(load_in_4bit=True)
                     model_params["quantization_config"] = quantization_config
+                else:
+                    print(f"Invalid quant_level setting, BitsAndBytes supports only int8 and int4 quants but you set {quant_level}; proceeding with BitsAndBytes-Int4 Quant")
+                    print("Proceeding with BitsAndBytes-Int4 Quant")
+                    quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+                    model_params["quantization_config"] = quantization_config
             except Exception as e:
                 handle_local_error("Could not set BitsAndBytes config to initialize_model(), encountered error: ", e)
         elif quantize == "quanto":
@@ -484,6 +515,44 @@ def initialize_model():
                 print("Proceeding with Quanto-Int4 Weights")
                 quantization_config  = QuantoConfig(weights="int4")
                 model_params["quantization_config"] = quantization_config
+            elif quant_level == "int2":
+                print("Proceeding with Quanto-Int2 Weights")
+                quantization_config  = QuantoConfig(weights="int2")
+                model_params["quantization_config"] = quantization_config
+            else:
+                print(f"Invalid quant_level setting, Quanto supports only int8, int4 and int2 quants but you set {quant_level}; proceeding with Quanto-Int4 Quant")
+                quantization_config  = QuantoConfig(weights="int4")
+                model_params["quantization_config"] = quantization_config
+        elif quantize == "hqq":
+            print("HQQ-Quantizing")
+            quant_level = quant_level.lower().strip()
+
+            if quant_level == "int8":
+                print("Proceeding with HQQ-Int8 Weights")
+                quantization_config  = HqqConfig(nbits=8, group_size=hqq_group_size, quant_zero=False, quant_scale=False, axis=0)
+                model_params["quantization_config"] = quantization_config
+            elif quant_level == "int4":
+                print("Proceeding with HQQ-Int4 Weights")
+                quantization_config  = HqqConfig(nbits=4, group_size=hqq_group_size, quant_zero=False, quant_scale=False, axis=0)
+                model_params["quantization_config"] = quantization_config
+            elif quant_level == "int3":
+                print("Proceeding with HQQ-Int3 Weights")
+                quantization_config  = HqqConfig(nbits=3, group_size=hqq_group_size, quant_zero=False, quant_scale=False, axis=0)
+                model_params["quantization_config"] = quantization_config
+            elif quant_level == "int2":
+                print("Proceeding with HQQ-Int2 Weights")
+                quantization_config  = HqqConfig(nbits=2, group_size=hqq_group_size, quant_zero=False, quant_scale=False, axis=0)
+                model_params["quantization_config"] = quantization_config
+            elif quant_level == "int1":
+                print("Proceeding with HQQ-Int1 Weights")
+                quantization_config  = HqqConfig(nbits=1, group_size=hqq_group_size, quant_zero=False, quant_scale=False, axis=0)
+                model_params["quantization_config"] = quantization_config
+            else:
+                print(f"Invalid quant_level setting, HQQ supports int8, int4, int3, int2 & int1 quants but you set {quant_level}; proceeding with HQQ-Int4 Quant")
+                quantization_config  = HqqConfig(nbits=4, group_size=hqq_group_size, quant_zero=False, quant_scale=False, axis=0)
+                model_params["quantization_config"] = quantization_config
+
+    print(f"model_params: {model_params}")
 
     try:
         model = AutoModelForCausalLM.from_pretrained(model_id, **model_params)
