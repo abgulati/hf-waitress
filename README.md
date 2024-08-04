@@ -105,7 +105,7 @@ python hf_waitress.py [arguments]
 
 - HQQ:
     - Half-Quadratic Quantization (HQQ) implements on-the-fly quantization via fast robust optimization. It doesn’t require calibration data and can be used to quantize any model.
-    - Supports: CPU, GPU
+    - Supports: CPU, NvCUDA GPU
     - Supported Quantization Levels: int8, int4, int3, int2 and int1
 
 - AWQ:
@@ -113,6 +113,8 @@ python hf_waitress.py [arguments]
     - This significantly reduces quantization loss such that you can run models in 4-bit precision without experiencing any performance degradation.
     - Supports: GPUs: Nvidia CUDA and AMD ROCm supported GPUs
     - See section below for running these models
+
+- Check the [official HF-docs](https://huggingface.co/docs/transformers/main/en/quantization/overview) for more details
 
 ### Loading AWQ-Quantized Models:
 
