@@ -114,7 +114,7 @@ python hf_waitress.py [arguments]
     - Supports: GPUs: Nvidia CUDA and AMD ROCm supported GPUs
     - See section below for running these models
 
-- Check the [official HF-docs](https://huggingface.co/docs/transformers/main/en/quantization/overview) for more details
+- Check the [official HF-docs](https://huggingface.co/docs/transformers/main/en/quantization/overview) for more details and hardware-support matrix.
 
 ### Loading AWQ-Quantized Models:
 
