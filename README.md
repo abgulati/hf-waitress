@@ -57,7 +57,7 @@ python hf_waitress.py [arguments]
 - `--gguf_model_id`: GGUF repository ID, defaults to None - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
 - `--gguf_filename`: Specific GGUF filename, defaults to None - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
 - `--quantize`: Quantization method ('bitsandbytes', 'quanto', 'hqq' or 'n' for none, see important details below.).
-- `--quant_level`: Quantization level (Valid values: int8 & int4 for BitsAndBytes and Quanto; int8, int4, int3, int2, int1 for HQQ.).
+- `--quant_level`: Quantization level (Valid values -  BitsAndBytes: int8 & int4; Quanto: int8, int4 and int2; HQQ: int8, int4, int3, int2, int1).
 - `--hqq_group_size`: Specify group_size (default: 64) for HQQ quantization. No restrictions as long as weight.numel() is divisible by the group_size.
 - `--push_to_hub`: Push quantized model to Hugging Face Hub.
 - `--torch_device_map`: Specify inference device (e.g., 'cuda', 'cpu').
@@ -89,7 +89,7 @@ python hf_waitress.py [arguments]
 
 ### Quantizing LLMs
 
-- Several Quantization methods are available in HF-Waitress: BitsAndBytes, Quanto, HQQ, and the ability to run AWQ models directly off the HF-Hub
+- Several Quantization methods are available in HF-Waitress: BitsAndBytes, Quanto and HQQ, alongside the ability to run HF-Transformer and AWQ models directly off the HF-Hub
 
 - BitsAndBytes:
     - Requires: Nvidia CUDA-supported GPU
@@ -98,7 +98,7 @@ python hf_waitress.py [arguments]
 
 - Quanto:
     - Native PyTorch Quantization technique - versatile pytorch quantization toolkit. 
-    - The quantization method used is the linear quantization. 
+    - The underlying method used is the linear quantization. 
     - Supports: CPU, GPU, Apple Silicon
     - Supported Quantization Levels: int8, int4 and int2
     - No significant memory-savings observed, but boasts broader hardware compatibility.
@@ -109,9 +109,9 @@ python hf_waitress.py [arguments]
     - Supported Quantization Levels: int8, int4, int3, int2 and int1
 
 - AWQ:
-    - Activation-aware Weight Quantization (AWQ) doesn’t quantize all the weights in a model, and instead, it preserves a small percentage of weights that are important for LLM performance. 
+    - Activation-aware Weight Quantization (AWQ) doesn’t quantize all the weights in a model, and instead preserves a small percentage of weights that are important for LLM performance. 
     - This significantly reduces quantization loss such that you can run models in 4-bit precision without experiencing any performance degradation.
-    - Supports: GPUs: Nvidia CUDA and AMD ROCm supported GPUs
+    - Supports: GPUs - Nvidia CUDA and AMD ROCm compliant GPUs
     - See section below for running these models
 
 - Check the [official HF-docs](https://huggingface.co/docs/transformers/main/en/quantization/overview) for more details and hardware-support matrix.
