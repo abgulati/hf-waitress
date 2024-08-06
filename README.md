@@ -50,7 +50,7 @@ Example:
 ```
 python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize=quanto --quant_level=int4 --access_token=<token> --trust_remote_code --use_flash_attention_2 --do_sample
 ```
-*launch-arguments are optional though, even on the first run! See below for first-run defaults.*
+*launch-arguments are optional, even on the first run! See below for defaults.*
 
 ### Command-line Arguments
 
@@ -77,7 +77,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 - `--port`: Specify the server port (default: 9069).
 - `--reset_to_defaults`: Reset all settings to default values.
 
-### First-run Defaults (for missing launch-args)
+### Default Values for Missing Launch-Arguments
 ```
 {
     'access_gated':False,
