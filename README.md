@@ -48,6 +48,8 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 
 ## Installation
 
+- NOTE: Ensure [Dependencies](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#dependencies) are installed!
+
 1. Clone this repository:
 
     ```
@@ -360,9 +362,8 @@ Errors are logged to `hf_server_log.log`. The log file uses a rotating file hand
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 # Support and Donations
-I hope that 'HF-Waitress` has been valuable in your work, and I invite you to support its ongoing development! If you appreciate the server and would like to contribute to its future enhancements, consider making a donation. Your support helps me to continue improving HF-Waitress and adding new features.
+If 'HF-Waitress` has proved useful to you, please consider donating to support on-going and future development.
 
-How to Donate
 To make a donation, please use the following link to my PayPal:
 
 [Donate via PayPal](https://www.paypal.com/donate/?business=35EP992TTK5J6&no_recurring=0&item_name=If+you+appreciate+my+work+and+would+like+to+contribute+to+its+ongoing+development+%26+enhancements%2C+consider+making+a+donation%21&currency_code=CAD)
