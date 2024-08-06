@@ -43,10 +43,12 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 
 ## Usage
 
-To start the server, run:
+To start the server, run: `python hf_waitress.py [arguments]`
+
+Example:
 
 ```
-python hf_waitress.py [arguments]
+python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize=quanto --quant_level=int4 --access_token=<token> --trust_remote_code --use_flash_attention_2 --do_sample
 ```
 *launch-arguments are optional, even on the first run!*
 
@@ -69,9 +71,9 @@ python hf_waitress.py [arguments]
 - `--pipeline_task`: Specify the pipeline task (default: 'text-generation').
 - `--max_new_tokens`: Maximum number of tokens to generate.
 - `--return_full_text`: Return the full text including the prompt.
-- `--temperature`: Set LLM temperature (0.0 to 2.0).
-- `--do_sample`: Perform sampling when selecting response tokens.
-- `--top_k`, `--top_p`, `--min_p`: Token selection parameters.
+- `--temperature`: Set LLM temperature (0.0 to 2.0) - set do_sample to True for temps above 0.0!
+- `--do_sample`: Perform sampling when selecting response tokens - must be set to True for temps above 0.0!
+- `--top_k`, `--top_p`, `--min_p`: Token selection parameters - must set do_sample to True!
 - `--port`: Specify the server port (default: 9069).
 - `--reset_to_defaults`: Reset all settings to default values.
 
