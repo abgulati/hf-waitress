@@ -50,7 +50,7 @@ Example:
 ```
 python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize=quanto --quant_level=int4 --access_token=<token> --trust_remote_code --use_flash_attention_2 --do_sample
 ```
-*launch-arguments are optional, even on the first run!*
+*launch-arguments are optional though, even on the first run! See below for first-run defaults.*
 
 ### Command-line Arguments
 
@@ -71,11 +71,42 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 - `--pipeline_task`: Specify the pipeline task (default: 'text-generation').
 - `--max_new_tokens`: Maximum number of tokens to generate.
 - `--return_full_text`: Return the full text including the prompt.
-- `--temperature`: Set LLM temperature (0.0 to 2.0) - set do_sample to True for temps above 0.0!
+- `--temperature`: Set LLM temperature (0.0 to 2.0) - set do_sample to True for temps above 0.0, and False when setting temperature=0.0!
 - `--do_sample`: Perform sampling when selecting response tokens - must be set to True for temps above 0.0!
 - `--top_k`, `--top_p`, `--min_p`: Token selection parameters - must set do_sample to True!
 - `--port`: Specify the server port (default: 9069).
 - `--reset_to_defaults`: Reset all settings to default values.
+
+### First-run Defaults (for missing launch-args)
+```
+{
+    'access_gated':False,
+    'access_token':"",
+    'model_id':"microsoft/Phi-3-mini-4k-instruct",
+    'gguf':False,
+    'awq':False,
+    'gguf_model_id':None,
+    'gguf_filename':None,
+    'quantize':"quanto",
+    'quant_level':"int4",
+    'hqq_group_size':64,
+    'push_to_hub':False,
+    'torch_device_map':"auto", 
+    'torch_dtype':"auto", 
+    'trust_remote_code':False, 
+    'use_flash_attention_2':False, 
+    'pipeline_task':"text-generation", 
+    'max_new_tokens':500, 
+    'return_full_text':False, 
+    'temperature':0.0,
+    'do_sample':False, 
+    'top_k':40, 
+    'top_p':0.95, 
+    'min_p':0.05, 
+    'n_keep':0,
+    'port':9069
+}
+```
 
 ### The required `model_id` can typically be obtained one of two ways, both of which involve going to the model's HuggingFace.co page:
 
