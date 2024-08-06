@@ -19,24 +19,25 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 <a id="table-of-contents"></a>
 ## Table of Contents
 
-1. [HF-Waitress Introduction](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#hf-waitress)
-    - [Key Features](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#key-features)
-2. [Dependencies](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#dependencies)
-3. [Installation](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#installation)
-4. [Usage](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#usage)
-    - [Command-line Arguments](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#command-line-arguments)
-    - [Default Values for Missing Launch-Arguments](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#default-values-for-missing-launch-arguments)
-    - [Obtaining the model_id](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#the-required-model_id-can-typically-be-obtained-one-of-two-ways-both-of-which-involve-going-to-the-models-huggingfaceco-page)
-    - [Quantizing LLMs](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#quantizing-llms)
-    - [Loading AWQ-Quantized Models:](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#loading-awq-quantized-models)
-5. [API Endpoints](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#api-endpoints)
-    - [Overview](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#overview)
-    - [Details](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#details)
-6. [Configuration - hf_config.json](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#configuration)
-7. [Error Handling and Logging](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#error-handling-and-logging)
-8. [Contributing](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#contributing)
-10. [Support and Donations](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#support-and-donations)
+1. [HF-Waitress Introduction](#hf-waitress)
+    - [Key Features](#key-features)
+2. [Dependencies](#dependencies)
+3. [Installation](#installation)
+4. [Usage](#usage)
+    - [Command-line Arguments](#command-line-arguments)
+    - [Default Values for Missing Launch-Arguments](#default-values-for-missing-launch-arguments)
+    - [Obtaining the model_id](#the-required-model_id-can-typically-be-obtained-one-of-two-ways-both-of-which-involve-going-to-the-models-huggingfaceco-page)
+    - [Quantizing LLMs](#quantizing-llms)
+    - [Loading AWQ-Quantized Models:](#loading-awq-quantized-models)
+5. [API Endpoints](#api-endpoints)
+    - [Overview](#overview)
+    - [Details](#details)
+6. [Configuration - hf_config.json](#configuration)
+7. [Error Handling and Logging](#error-handling-and-logging)
+8. [Contributing](#contributing)
+10. [Support and Donations](#support-and-donations)
 
+<a id="dependencies"></a>
 ## Dependencies
 
 1. Python v3.10.x or above
@@ -49,9 +50,10 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 
 3. (optional) If attempting to use Flash Attention 2, specific Nvidia GPUs are required. Check the [official-repo](https://github.com/Dao-AILab/flash-attention?tab=readme-ov-file#installation-and-features) for requirements and installation instructions.
 
+<a id="installation"></a>
 ## Installation
 
-- NOTE: Ensure [Dependencies](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#dependencies) are installed!
+- NOTE: Ensure [Dependencies](#dependencies) are installed!
 
 1. Clone this repository:
 
@@ -66,6 +68,7 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
     pip install -r requirements.txt
     ```
 
+<a id="usage"></a>
 ## Usage
 
 To start the server, run: `python hf_waitress.py [arguments]`
@@ -77,6 +80,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 ```
 *launch-arguments are optional, even on the first run! See below for defaults.*
 
+<a id="command-line-arguments"></a>
 ### Command-line Arguments
 
 - `--model_id`: The model ID in HF-Transformers format - see below for details.
@@ -102,6 +106,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 - `--port`: Specify the server port (default: 9069).
 - `--reset_to_defaults`: Reset all settings to default values.
 
+<a id="default-values-for-missing-launch-arguments"></a>
 ### Default Values for Missing Launch-Arguments
 ```
 {
@@ -133,6 +138,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 }
 ```
 
+<a id="obtaining-the-model-id"></a>
 ### The required `model_id` can typically be obtained one of two ways, both of which involve going to the model's HuggingFace.co page:
 
 1. Simply make use of the copy function provided by HuggingFace:
@@ -147,6 +153,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 <img src="https://github.com/abgulati/hf-server/blob/main/images/hf-sample.png"  align="center">
 </p>
 
+<a id="quantizing-llms"></a>
 ### Quantizing LLMs
 
 - Several Quantization methods are available in HF-Waitress: BitsAndBytes, Quanto and HQQ, alongside the ability to run HF-Transformer and AWQ models directly off the HF-Hub
@@ -176,6 +183,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 
 - Check the [official HF-docs](https://huggingface.co/docs/transformers/main/en/quantization/overview) for more details and hardware-support matrix.
 
+<a id="loading-awq-quantized-models"></a>
 ### Loading AWQ-Quantized Models:
 
 - There are several libraries for quantizing models with the AWQ algorithm, such as llm-awq, autoawq or optimum-intel. 
@@ -194,8 +202,10 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 
 [Back to Table of Contents](#table-of-contents)
 
+<a id="api-endpoints"></a>
 ## API Endpoints
 
+<a id="overview"></a>
 ### Overview:
 
 1. `/completions` (POST): Generate completions for given messages.
@@ -206,6 +216,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 6. `/restart_server` (GET): Restart the LLM server.
 
 
+<a id="details"></a>
 ### Details:
 
 1. `/completions` (POST): Generate completions for given messages.
@@ -352,18 +363,22 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
 
 [Back to Table of Contents](#table-of-contents)
 
+<a id="configuration"></a>
 ## Configuration
 
 The server uses a `hf_config.json` file to store and manage configurations. You can modify this file directly or use the provided API endpoints to update settings.
 
+<a id="error-handling-and-logging"></a>
 ## Error Handling and Logging
 
 Errors are logged to `hf_server_log.log`. The log file uses a rotating file handler, keeping the most recent logs and discarding older ones.
 
+<a id="contributing"></a>
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+<a id="support-and-donations"></a>
 # Support and Donations
 If `HF-Waitress` has proved useful to you, please consider donating to support on-going and future development.
 
