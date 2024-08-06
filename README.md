@@ -1,10 +1,12 @@
 # HF-Waitress
 
-HF-Waitress is a powerful and flexible server application for deploying and interacting with Hugging Face Transformers models. It simplifies the process of running open-source Large Language Models (LLMs) locally, addressing common pain points in model deployment and usage.
+HF-Waitress is a powerful and flexible server application for deploying and interacting with HuggingFace Transformer models. It simplifies the process of running open-source Large Language Models (LLMs) locally, addressing common pain points in model deployment and usage.
+
+This server enables loading HF-Transformer & AWQ-quantized models directly off the hub, while providing on-the-fly quantization via BitsAndBytes, HQQ and Quanto for the former. It negates the need to manually download any models yourself, simply working off the model name instead. It requires no setup, and provides concurrency and streaming responses all from within a single, easily-portable, platform-agnostic Python script.
 
 ## Key Features
 
-- **On-the-fly, in-place quantization**: Supports int8 & int4 quantization via BitsAndBytes and Quanto.
+- **On-the-fly, in-place quantization**: Supports int8 & int4 quantization via BitsAndBytes, Quanto and HQQ.
 - **Model Agnosticism**: Compatible with any HF-Transformers format LLM.
 - **Configuration Management**: Uses `config.json` to store settings, allowing for easy configuration and persistence across runs.
 - **Error Handling**: Detailed logging and traceback reporting via centralized error-handling functions.
