@@ -168,6 +168,7 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
                     'access_token':"",
                     'model_id':"microsoft/Phi-3-mini-4k-instruct",
                     'gguf':False,
+                    'awq':False,
                     'gguf_model_id':None,
                     'gguf_filename':None,
                     'quantize':"quanto",
@@ -293,7 +294,7 @@ def parse_arguments():
 
     # Even if a parser object could not be created, a read_request will write & return defaults 
     try:
-        read_return = read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
+        read_return = read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'awq', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
         access_gated = str(read_return['access_gated']).lower() == 'true'
         access_token = str(read_return['access_token'])
         model_id = str(read_return['model_id'])
@@ -304,7 +305,6 @@ def parse_arguments():
         torch_device_map = str(read_return['torch_device_map'])
         torch_dtype = str(read_return['torch_dtype'])
         trust_remote_code = str(read_return['trust_remote_code']).lower() == 'true'
-        use_flash_attention_2 = str(read_return['use_flash_attention_2']).lower() == 'true'
         pipeline_task = str(read_return['pipeline_task'])
         max_new_tokens = int(read_return['max_new_tokens'])
         return_full_text = str(read_return['return_full_text']).lower() == 'true'
@@ -325,6 +325,7 @@ def parse_arguments():
         parser.add_argument("--access_token", type=str, default=access_token, help="Access Token obtained from HF-Settings -> Access Tokens")
         parser.add_argument("--model_id", type=str, default=model_id, help="model_id for for LLM in HF-Transformers format obtained from the model card. Remembers previously set value and falls-back to Phi3-mini-4k-instruct as the default.")
         parser.add_argument("--gguf", action="store_true", default=False, help="Add this flag if you'll be loading a GGUF LLM. Defaults to False.")
+        parser.add_argument("--awq", action="store_true", default=False, help="Add this flag when loading AWQ-quantized models directly off the HF-Hub.")
         parser.add_argument("--gguf_model_id", type=str, default=None, help="GGUF model_id of the target repo. Defaults to None")
         parser.add_argument("--gguf_filename", type=str, default=None, help="GGUF filename from the target repo. Defaults to None")
         parser.add_argument("--quantize", type=str, default=quantize, help="Quantization method to be utilized. Simply type 'n' to not use quantization. Remembers previously set value and falls-back to bitsandbytes as the default.")
@@ -359,7 +360,7 @@ def parse_arguments():
                 config_writer_semaphore.release()
                 
                 # Set defaults
-                read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
+                read_config(['access_gated', 'access_token', 'model_id',  'gguf', 'awq', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task', 'max_new_tokens', 'return_full_text', 'temperature', 'do_sample', 'top_k', 'top_p', 'min_p', 'n_keep', 'port'])
 
             except Exception as e:
                 handle_local_error("Could not reset hf_config.json, encountered error: ", e)
@@ -370,6 +371,7 @@ def parse_arguments():
                     'access_token':args.access_token,
                     'model_id':args.model_id,
                     'gguf':args.gguf,
+                    'awq':args.awq,
                     'gguf_model_id':args.gguf_model_id,
                     'gguf_filename':args.gguf_filename,
                     'quantize':args.quantize,
@@ -427,9 +429,10 @@ def initialize_model():
     global PIPE
 
     try:
-        read_return = read_config(['model_id', 'gguf', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
+        read_return = read_config(['model_id', 'gguf', 'awq', 'gguf_model_id', 'gguf_filename', 'quantize', 'quant_level', 'hqq_group_size', 'push_to_hub', 'torch_device_map', 'torch_dtype', 'trust_remote_code', 'use_flash_attention_2', 'pipeline_task'])
         model_id = str(read_return['model_id'])
         gguf = str(read_return['gguf']).lower() == 'true'
+        awq = str(read_return['awq']).lower() == 'true'
         gguf_model_id = str(read_return['gguf_model_id'])
         gguf_filename = str(read_return['gguf_filename'])
         quantize = str(read_return['quantize'])
@@ -466,10 +469,19 @@ def initialize_model():
 
         return True
 
-    torch_dtype_obj = str_to_torch_dtype(torch_dtype)
-    if torch_dtype_obj is None:
-        handle_error_no_return("Could not obtain torch dtype object, double-check the value passed is correct. Setting to auto and proceeding.")
-        torch_dtype_obj = "auto"
+    if awq:
+        print("Proceed to load AWQ-quantized model from the HF-Hub, setting torch_dtype=torch.float16 and quantize=n and proceeding.")
+        torch_dtype_obj = torch.float16
+        quantize = "n"
+    else:
+        try:
+            torch_dtype_obj = str_to_torch_dtype(torch_dtype)
+        except Exception as e:
+            handle_error_no_return("Error determining torch data-type, setting to auto and proceeding: ", e)
+            torch_dtype_obj = "auto"
+        if torch_dtype_obj is None:
+            handle_error_no_return("Could not obtain torch dtype object, check if the value passed is correct. Setting to auto and proceeding.")
+            torch_dtype_obj = "auto"
 
     model_params = {
         "device_map": torch_device_map,
