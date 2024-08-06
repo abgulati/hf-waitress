@@ -1,9 +1,11 @@
+<a id="hf-waitress"></a>
 # HF-Waitress
 
 HF-Waitress is a powerful and flexible server application for deploying and interacting with HuggingFace Transformer models. It simplifies the process of running open-source Large Language Models (LLMs) locally on-device, addressing common pain points in model deployment and usage.
 
 This server enables loading HF-Transformer & AWQ-quantized models directly off the hub, while providing on-the-fly quantization via BitsAndBytes, HQQ and Quanto for the former. It negates the need to manually download any model yourself, simply working off the models name instead. It requires no setup, and provides concurrency and streaming responses all from within a single, easily-portable, platform-agnostic Python script.
 
+<a id="key-features"></a>
 ## Key Features
 
 - **On-the-fly, in-place quantization**: Supports int8 & int4 quantization via BitsAndBytes, Quanto and HQQ.
@@ -14,6 +16,7 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 - **Concurrency Control**: Uses semaphores for selective concurrency while taking advantage of semaphore-native queueing.
 - **Streaming Responses**: Supports both standard and streaming completions.
 
+<a id="table-of-contents"></a>
 ## Table of Contents
 
 1. [HF-Waitress Introduction](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#hf-waitress)
@@ -189,7 +192,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
     ```
 - This will auto-set `quantize=n` & `torch_dtype=torch.float16` without overwriting their values in `hf_config.json`
 
-[Back to Table of Contents](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#table-of-contents)
+[Back to Table of Contents](#table-of-contents)
 
 ## API Endpoints
 
@@ -347,7 +350,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
         }
         ```
 
-[Back to Table of Contents](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#table-of-contents)
+[Back to Table of Contents](#table-of-contents)
 
 ## Configuration
 
@@ -362,7 +365,7 @@ Errors are logged to `hf_server_log.log`. The log file uses a rotating file hand
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 # Support and Donations
-If 'HF-Waitress` has proved useful to you, please consider donating to support on-going and future development.
+If `HF-Waitress` has proved useful to you, please consider donating to support on-going and future development.
 
 To make a donation, please use the following link to my PayPal:
 
@@ -370,4 +373,4 @@ To make a donation, please use the following link to my PayPal:
 
 Your contributions are greatly appreciated and will be used to fund further development efforts.
 
-[Back to Table of Contents](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#table-of-contents)
+[Back to Table of Contents](#table-of-contents)
