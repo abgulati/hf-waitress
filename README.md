@@ -14,6 +14,26 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 - **Concurrency Control**: Uses semaphores for selective concurrency while taking advantage of semaphore-native queueing.
 - **Streaming Responses**: Supports both standard and streaming completions.
 
+## Table of Contents
+
+1. [HF-Waitress Introduction](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#hf-waitress)
+    - [Key Features](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#key-features)
+2. [Dependencies](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#dependencies)
+3. [Installation](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#installation)
+4. [Usage](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#usage)
+    - [Command-line Arguments](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#command-line-arguments)
+    - [Default Values for Missing Launch-Arguments](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#default-values-for-missing-launch-arguments)
+    - [Obtaining the model_id](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#the-required-model_id-can-typically-be-obtained-one-of-two-ways-both-of-which-involve-going-to-the-models-huggingfaceco-page)
+    - [Quantizing LLMs](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#quantizing-llms)
+    - [Loading AWQ-Quantized Models:](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#loading-awq-quantized-models)
+5. [API Endpoints](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#api-endpoints)
+    - [Overview](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#overview)
+    - [Details](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#details)
+6. [Configuration - hf_config.json](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#configuration)
+7. [Error Handling and Logging](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#error-handling-and-logging)
+8. [Contributing](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#contributing)
+10. [Support and Donations](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#support-and-donations)
+
 ## Dependencies
 
 1. Python v3.10.x or above
@@ -167,6 +187,7 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
     ```
 - This will auto-set `quantize=n` & `torch_dtype=torch.float16` without overwriting their values in `hf_config.json`
 
+[Back to Table of Contents](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#table-of-contents)
 
 ## API Endpoints
 
@@ -324,6 +345,8 @@ python hf_waitress.py --model_id=mistralai/Mistral-Nemo-Instruct-2407 --quantize
         }
         ```
 
+[Back to Table of Contents](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#table-of-contents)
+
 ## Configuration
 
 The server uses a `hf_config.json` file to store and manage configurations. You can modify this file directly or use the provided API endpoints to update settings.
@@ -335,3 +358,15 @@ Errors are logged to `hf_server_log.log`. The log file uses a rotating file hand
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+# Support and Donations
+I hope that 'HF-Waitress` has been valuable in your work, and I invite you to support its ongoing development! If you appreciate the server and would like to contribute to its future enhancements, consider making a donation. Your support helps me to continue improving HF-Waitress and adding new features.
+
+How to Donate
+To make a donation, please use the following link to my PayPal:
+
+[Donate via PayPal](https://www.paypal.com/donate/?business=35EP992TTK5J6&no_recurring=0&item_name=If+you+appreciate+my+work+and+would+like+to+contribute+to+its+ongoing+development+%26+enhancements%2C+consider+making+a+donation%21&currency_code=CAD)
+
+Your contributions are greatly appreciated and will be used to fund further development efforts.
+
+[Back to Table of Contents](https://github.com/abgulati/hf-waitress?tab=readme-ov-file#table-of-contents)
