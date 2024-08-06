@@ -98,10 +98,10 @@ python hf_waitress.py [arguments]
 
 - Quanto:
     - Native PyTorch Quantization technique - versatile pytorch quantization toolkit. 
-    - The underlying method used is the linear quantization. 
+    - The underlying method used is linear quantization. 
     - Supports: CPU, GPU, Apple Silicon
     - Supported Quantization Levels: int8, int4 and int2
-    - No significant memory-savings observed, but boasts broader hardware compatibility.
+    - NOTE: At load time, the model will report a high memory footprint but actual memory-usage will be significantly lower.
 
 - HQQ:
     - Half-Quadratic Quantization (HQQ) implements on-the-fly quantization via fast robust optimization. It doesn’t require calibration data and can be used to quantize any model.
@@ -126,10 +126,11 @@ python hf_waitress.py [arguments]
     ```
 - NOTE: As of this writing, AutoAWQ requires Torch 2.3.x. If you have another version of Torch already installed (such as for CUDA-12.4 etc), you can try to run the above with "--no-deps": `pip install --no-deps autoawq`. in my testing, AWQ models work fine this way, but YMMV.
 
-- To run models on the HuggingFace-Hub in the AWQ format, simply specify the model_id as normal and set `quantize=n` & `torch_dtype=torch.float16` at launch:
+- To run models on the HuggingFace-Hub in the AWQ format, simply specify the model_id and set the `--awq` flag at launch:
     ```
-    python .\hf_waitress.py --model_id=hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4 --quantize=n --torch_dtype=torch.float16
+    python .\hf_waitress.py --awq --model_id=hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
     ```
+- This will auto-set `quantize=n` & `torch_dtype=torch.float16` without overwriting their values in `hf_config.json`
 
 
 ## API Endpoints
