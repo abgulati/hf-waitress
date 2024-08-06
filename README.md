@@ -1,6 +1,6 @@
 # HF-Waitress
 
-HF-Waitress is a powerful and flexible server application for deploying and interacting with HuggingFace Transformer models. It simplifies the process of running open-source Large Language Models (LLMs) locally, addressing common pain points in model deployment and usage.
+HF-Waitress is a powerful and flexible server application for deploying and interacting with HuggingFace Transformer models. It simplifies the process of running open-source Large Language Models (LLMs) locally on-device, addressing common pain points in model deployment and usage.
 
 This server enables loading HF-Transformer & AWQ-quantized models directly off the hub, while providing on-the-fly quantization via BitsAndBytes, HQQ and Quanto for the former. It negates the need to manually download any model yourself, simply working off the models name instead. It requires no setup, and provides concurrency and streaming responses all from within a single, easily-portable, platform-agnostic Python script.
 
@@ -55,9 +55,9 @@ python hf_waitress.py [arguments]
 - `--model_id`: The model ID in HF-Transformers format - see below for details.
 - `--access_gated`: Set to True if accessing gated models you're approved for.
 - `--access_token`: Your Hugging Face Access Token.
-- `--gguf`: Add this flag if attempting to load a GGUF model, defaults to False - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
-- `--gguf_model_id`: GGUF repository ID, defaults to None - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
-- `--gguf_filename`: Specific GGUF filename, defaults to None - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf`: Add this flag if attempting to load a GGUF model - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf_model_id`: GGUF repository ID - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
+- `--gguf_filename`: Specific GGUF filename - [For future use, not presently functional](https://huggingface.co/docs/transformers/main/en/gguf)
 - `--quantize`: Quantization method ('bitsandbytes', 'quanto', 'hqq' or 'n' for none, see important details below.).
 - `--quant_level`: Quantization level (Valid values -  BitsAndBytes: int8 & int4; Quanto: int8, int4 and int2; HQQ: int8, int4, int3, int2, int1).
 - `--hqq_group_size`: Specify group_size (default: 64) for HQQ quantization. No restrictions as long as weight.numel() is divisible by the group_size.
