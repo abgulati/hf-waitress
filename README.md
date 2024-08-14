@@ -8,9 +8,14 @@ This server enables loading HF-Transformer & AWQ-quantized models directly off t
 <a id="key-features"></a>
 ## Key Features
 
-- **On-the-fly, in-place quantization**: Supports int8 & int4 quantization via BitsAndBytes, Quanto and HQQ.
+- **On-the-fly, in-place quantization**:
+    - `Quanto` `int8`, `int4` and `int2` quantization for all hardware,
+    - `BitsAndBytes` `int8` & `int4` quantization for Nvidia GPUs,
+    - `HQQ` `int8`, `int4`, `int3`, `int2`, `int1` quantization for Nvidia & AMD GPUs.
+- **Activation-Aware Quantization (AWQ) Support**: load AWQ-quantized models from HF-Hub.
 - **Model Agnosticism**: Compatible with any HF-Transformers format LLM.
 - **Configuration Management**: Uses `config.json` to store settings, allowing for easy configuration and persistence across runs.
+- **Hardware & Platform Agnostic**: Run native or quantized models on all manner of CPUs, GPUs and Apple M-silicon across Windows, Linux, MacOS & Docker containers.
 - **Error Handling**: Detailed logging and traceback reporting via centralized error-handling functions.
 - **Health Endpoint**: Provides valuable information about the loaded model and server health.
 - **Concurrency Control**: Uses semaphores for selective concurrency while taking advantage of semaphore-native queueing.
