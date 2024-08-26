@@ -18,10 +18,12 @@ import io
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
 
 from waitress import serve
 
 app = Flask(__name__)
+CORS(app)
 
 PIPE = None
 
@@ -126,7 +128,7 @@ def write_config(config_updates, filename='hf_config.json'):
 
         #restart logic in write_config() might be unnecessary, circle back later
         restart_required = False
-        triggers_for_hf_restart = ['torch_device_map', 'torch_dtype', 'model_id', 'trust_remote_code', 'attn_implementation', 'pipeline_task', 'quantize', 'quant_level', 'port', 'use_flash_attention_2']
+        triggers_for_hf_restart = ['torch_device_map', 'torch_dtype', 'model_id', 'awq', 'attn_implementation', 'pipeline_task', 'quantize', 'quant_level', 'port', 'use_flash_attention_2', 'hqq_group_size']
         for key in config_updates:
             if key in triggers_for_hf_restart and config_updates[key] != hf_config.get(key):
                 restart_required = True
@@ -177,7 +179,7 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
                     'push_to_hub':False,
                     'torch_device_map':"auto", 
                     'torch_dtype':"auto", 
-                    'trust_remote_code':False, 
+                    'trust_remote_code':True, 
                     'use_flash_attention_2':False, 
                     'pipeline_task':"text-generation", 
                     'max_new_tokens':500, 
@@ -188,7 +190,31 @@ def read_config(keys, default_value=None, filename='hf_config.json'):
                     'top_p':0.95, 
                     'min_p':0.05, 
                     'n_keep':0,
-                    'port':9069
+                    'port':9069,
+                    'model_list': ['mistralai/Mistral-Nemo-Instruct-2407', 
+                                   'meta-llama/Meta-Llama-3.1-8B-Instruct', 
+                                   'meta-llama/Meta-Llama-3.1-70B-Instruct', 
+                                   'meta-llama/Meta-Llama-3.1-405B-Instruct-FP8',
+                                   'hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4',
+                                   'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4',
+                                   'microsoft/Phi-3.5-mini-instruct',
+                                   'microsoft/Phi-3.5-MoE-instruct',
+                                   'microsoft/Phi-3-mini-4k-instruct',
+                                   'microsoft/Phi-3-mini-128k-instruct',
+                                   'microsoft/Phi-3-small-8k-instruct',
+                                   'microsoft/Phi-3-small-128k-instruct',
+                                   'microsoft/Phi-3-medium-4k-instruct',
+                                   'microsoft/Phi-3-medium-128k-instruct',
+                                   'CohereForAI/c4ai-command-r-plus',
+                                   'CohereForAI/c4ai-command-r-v01',
+                                   'google/gemma-2-2b-it',
+                                   'google/gemma-2-9b-it',
+                                   'google/gemma-2-27b-it',
+                                   'Qwen/Qwen2-7B-Instruct',
+                                   'Qwen/Qwen2-72B-Instruct',
+                                   'alpindale/goliath-120b',
+                                   'TheBloke/goliath-120b-AWQ'
+                                   ]
                 }.get(key, 'undefined')
 
                 if default_value == 'undefined':
